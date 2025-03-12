@@ -63,8 +63,8 @@ Calorimeter Hit Cluster
 - `energyError::Float32`:  error on the energy [GeV]
 - `position::Vector3f`:  position of the cluster [mm]
 - `positionError::CovMatrix3f`:  covariance matrix of the position 
-- `iTheta::Float32`:  intrinsic direction of cluster at position  Theta. Not to be confused with direction cluster is seen from IP 
-- `phi::Float32`:  intrinsic direction of cluster at position - Phi. Not to be confused with direction cluster is seen from IP 
+- `iTheta::Float32`:  Polar angle of the cluster's intrinsic direction (used e.g. for vertexing). Not to be confused with the cluster position seen from IP 
+- `phi::Float32`:  Azimuthal angle of the cluster's intrinsic direction (used e.g. for vertexing). Not to be confused with the cluster position seen from IP 
 - `directionError::Vector3f`:  covariance matrix of the direction [mm**2]
 - `shapeParameters::PVector{Float32}`:  shape parameters. This should be accompanied by a descriptive list of names in the shapeParameterNames collection level metadata, as a vector of strings with the same ordering 
 - `subdetectorEnergies::PVector{Float32}`:  energy observed in a particular subdetector 
@@ -87,8 +87,8 @@ struct Cluster <: POD
     energyError::Float32             #  error on the energy [GeV]
     position::Vector3f               #  position of the cluster [mm]
     positionError::CovMatrix3f       #  covariance matrix of the position 
-    iTheta::Float32                  #  intrinsic direction of cluster at position  Theta. Not to be confused with direction cluster is seen from IP 
-    phi::Float32                     #  intrinsic direction of cluster at position - Phi. Not to be confused with direction cluster is seen from IP 
+    iTheta::Float32                  #  Polar angle of the cluster's intrinsic direction (used e.g. for vertexing). Not to be confused with the cluster position seen from IP 
+    phi::Float32                     #  Azimuthal angle of the cluster's intrinsic direction (used e.g. for vertexing). Not to be confused with the cluster position seen from IP 
     directionError::Vector3f         #  covariance matrix of the direction [mm**2]
     #---VectorMembers
     shapeParameters::PVector{Cluster,Float32,1}  #  shape parameters. This should be accompanied by a descriptive list of names in the shapeParameterNames collection level metadata, as a vector of strings with the same ordering 
@@ -147,7 +147,6 @@ The Monte Carlo particle - based on the lcio::MCParticle.
 - `momentum::Vector3d`:  particle 3-momentum at the production vertex [GeV]
 - `momentumAtEndpoint::Vector3d`:  particle 3-momentum at the endpoint [GeV]
 - `spin::Vector3f`:  spin (helicity) vector of the particle 
-- `colorFlow::Vector2i`:  color flow as defined by the generator 
 # Relations
 - `parents::MCParticle`:  The parents of this particle 
 - `daughters::MCParticle`:  The daughters this particle 
@@ -171,14 +170,13 @@ struct MCParticle <: POD
     momentum::Vector3d               #  particle 3-momentum at the production vertex [GeV]
     momentumAtEndpoint::Vector3d     #  particle 3-momentum at the endpoint [GeV]
     spin::Vector3f                   #  spin (helicity) vector of the particle 
-    colorFlow::Vector2i              #  color flow as defined by the generator 
     #---OneToManyRelations
     parents::Relation{MCParticle,MCParticle,1}  #  The parents of this particle 
     daughters::Relation{MCParticle,MCParticle,2}  #  The daughters this particle 
 end
 
-function MCParticle(;PDG=0, generatorStatus=0, simulatorStatus=0, charge=0, time=0, mass=0, vertex=Vector3d(), endpoint=Vector3d(), momentum=Vector3d(), momentumAtEndpoint=Vector3d(), spin=Vector3f(), colorFlow=Vector2i(), parents=Relation{MCParticle,MCParticle,1}(), daughters=Relation{MCParticle,MCParticle,2}())
-    MCParticle(-1, PDG, generatorStatus, simulatorStatus, charge, time, mass, vertex, endpoint, momentum, momentumAtEndpoint, spin, colorFlow, parents, daughters)
+function MCParticle(;PDG=0, generatorStatus=0, simulatorStatus=0, charge=0, time=0, mass=0, vertex=Vector3d(), endpoint=Vector3d(), momentum=Vector3d(), momentumAtEndpoint=Vector3d(), spin=Vector3f(), parents=Relation{MCParticle,MCParticle,1}(), daughters=Relation{MCParticle,MCParticle,2}())
+    MCParticle(-1, PDG, generatorStatus, simulatorStatus, charge, time, mass, vertex, endpoint, momentum, momentumAtEndpoint, spin, parents, daughters)
 end
 
 function pushToParents(c::MCParticle, o::MCParticle)
@@ -392,8 +390,8 @@ end
 Event Header. Additional parameters are assumed to go into the metadata tree.
 - Author: EDM4hep authors
 # Fields
-- `eventNumber::Int32`:  event number 
-- `runNumber::Int32`:  run number 
+- `eventNumber::UInt64`:  event number 
+- `runNumber::UInt32`:  run number 
 - `timeStamp::UInt64`:  time stamp 
 - `weight::Float64`:  event weight 
 - `weights::PVector{Float64}`:  event weights in case there are multiple. **NOTE that weights[0] might not be the same as weight!** Event weight names should be stored using the edm4hep::EventWeights name in the file level metadata 
@@ -403,8 +401,8 @@ Event Header. Additional parameters are assumed to go into the metadata tree.
 struct EventHeader <: POD
     index::ObjectID{EventHeader}     # ObjectID of himself
     #---Data Members
-    eventNumber::Int32               #  event number 
-    runNumber::Int32                 #  run number 
+    eventNumber::UInt64              #  event number 
+    runNumber::UInt32                #  run number 
     timeStamp::UInt64                #  time stamp 
     weight::Float64                  #  event weight 
     #---VectorMembers
@@ -449,7 +447,7 @@ Tracker hit
 - `quality::Int32`:  quality bit flag of the hit 
 - `time::Float32`:  time of the hit [ns]
 - `eDep::Float32`:  energy deposited on the hit [GeV]
-- `eDepError::Float32`:  error measured on EDep [GeV]
+- `eDepError::Float32`:  error measured on eDep [GeV]
 - `position::Vector3d`:  hit position [mm]
 - `covMatrix::CovMatrix3f`:  covariance matrix of the position (x,y,z) 
 """
@@ -461,7 +459,7 @@ struct TrackerHit3D <: TrackerHit
     quality::Int32                   #  quality bit flag of the hit 
     time::Float32                    #  time of the hit [ns]
     eDep::Float32                    #  energy deposited on the hit [GeV]
-    eDepError::Float32               #  error measured on EDep [GeV]
+    eDepError::Float32               #  error measured on eDep [GeV]
     position::Vector3d               #  hit position [mm]
     covMatrix::CovMatrix3f           #  covariance matrix of the position (x,y,z) 
 end
@@ -767,7 +765,7 @@ Tracker hit plane
 - `quality::Int32`:  quality bit flag of the hit 
 - `time::Float32`:  time of the hit [ns]
 - `eDep::Float32`:  energy deposited on the hit [GeV]
-- `eDepError::Float32`:  error measured on EDep [GeV]
+- `eDepError::Float32`:  error measured on eDep [GeV]
 - `u::Vector2f`:  measurement direction vector, u lies in the x-y plane 
 - `v::Vector2f`:  measurement direction vector, v is along z 
 - `du::Float32`:  measurement error along the direction 
@@ -783,7 +781,7 @@ struct TrackerHitPlane <: TrackerHit
     quality::Int32                   #  quality bit flag of the hit 
     time::Float32                    #  time of the hit [ns]
     eDep::Float32                    #  energy deposited on the hit [GeV]
-    eDepError::Float32               #  error measured on EDep [GeV]
+    eDepError::Float32               #  error measured on eDep [GeV]
     u::Vector2f                      #  measurement direction vector, u lies in the x-y plane 
     v::Vector2f                      #  measurement direction vector, v is along z 
     du::Float32                      #  measurement error along the direction 

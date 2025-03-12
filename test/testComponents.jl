@@ -26,11 +26,6 @@
     @test 2v4f == v4f + 2v4f - v4f
     @test 2v4f ≈ v4f + v4f
 
-    v2i = Vector2i(1,2)
-    @test v2i.a == 1
-    @test v2i.b == 2
-    @test 2v2i == v2i + v2i
-
     oid = ObjectID{Vertex}(10,0x12345678)
     @test oid.index == 10
     @test oid.collectionID == 0x12345678

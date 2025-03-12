@@ -44,14 +44,6 @@ Base.length(v::Vector3f) = 3
 ϕ(v::Vector3f) = atan(v.y, v.x)
 Base.zero(::Type{Vector3f}) = Vector3f()
 
-#---Vector2i
-Base.show(io::IO, v::Vector2i) = print(io, "($(v.a), $(v.b))")
-Base.:+(v1::Vector2i, v2::Vector2i) = Vector3d(v1.a + v2.a, v1.b + v2.b)
-Base.:-(v1::Vector2i, v2::Vector2i) = Vector3d(v1.a - v2.a, v1.b - v2.b)
-Base.:*(v::Vector2i, a::Number) = Vector3d(a*v.a, a*v.b)
-Base.:*(a::Number, v::Vector2i) = v * a
-Base.zero(::Type{Vector2i}) = Vector2i()
-
 #---Vector4f
 Base.show(io::IO, v::Vector4f) = print(io, "($(v.x), $(v.y), $(v.z), $(v.t))")
 Base.:+(v1::Vector4f, v2::Vector4f) = Vector4f(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z, v1.t + v2.t)

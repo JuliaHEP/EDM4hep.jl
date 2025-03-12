@@ -2,6 +2,19 @@
 schema_version = v"3"
 
 """
+A generic 4 dimensional covariance matrix with values stored in lower triangular form
+# Fields
+- `values::SVector{10,Float32}`:  the covariance matrix values 
+"""
+struct CovMatrix4f <: POD
+    values::SVector{10,Float32}      #  the covariance matrix values 
+    CovMatrix4f(values=zero(SVector{10,Float32})) = new(values)
+end
+
+Base.convert(::Type{CovMatrix4f}, t::Tuple) = CovMatrix4f(t...)
+Base.convert(::Type{CovMatrix4f}, v::@NamedTuple{values::SVector{10,Float32}}) = CovMatrix4f(v.values)
+
+"""
 Vector2f
 # Fields
 - `a::Float32`: 
@@ -17,19 +30,36 @@ Base.convert(::Type{Vector2f}, t::Tuple) = Vector2f(t...)
 Base.convert(::Type{Vector2f}, v::@NamedTuple{a::Float32, b::Float32}) = Vector2f(v.a, v.b)
 
 """
-Vector2i
+Generic vector for storing classical 4D coordinates in memory. Four momentum helper functions are in edm4hep::utils
 # Fields
-- `a::Int32`: 
-- `b::Int32`: 
+- `x::Float32`: 
+- `y::Float32`: 
+- `z::Float32`: 
+- `t::Float32`: 
 """
-struct Vector2i <: POD
-    a::Int32                          
-    b::Int32                          
-    Vector2i(a=zero(Int32), b=zero(Int32)) = new(a, b)
+struct Vector4f <: POD
+    x::Float32                        
+    y::Float32                        
+    z::Float32                        
+    t::Float32                        
+    Vector4f(x=zero(Float32), y=zero(Float32), z=zero(Float32), t=zero(Float32)) = new(x, y, z, t)
 end
 
-Base.convert(::Type{Vector2i}, t::Tuple) = Vector2i(t...)
-Base.convert(::Type{Vector2i}, v::@NamedTuple{a::Int32, b::Int32}) = Vector2i(v.a, v.b)
+Base.convert(::Type{Vector4f}, t::Tuple) = Vector4f(t...)
+Base.convert(::Type{Vector4f}, v::@NamedTuple{x::Float32, y::Float32, z::Float32, t::Float32}) = Vector4f(v.x, v.y, v.z, v.t)
+
+"""
+A generic 2 dimensional covariance matrix with values stored in lower triangular form
+# Fields
+- `values::SVector{3,Float32}`:  the covariance matrix values 
+"""
+struct CovMatrix2f <: POD
+    values::SVector{3,Float32}       #  the covariance matrix values 
+    CovMatrix2f(values=zero(SVector{3,Float32})) = new(values)
+end
+
+Base.convert(::Type{CovMatrix2f}, t::Tuple) = CovMatrix2f(t...)
+Base.convert(::Type{CovMatrix2f}, v::@NamedTuple{values::SVector{3,Float32}}) = CovMatrix2f(v.values)
 
 """
 Vector3f
@@ -66,38 +96,6 @@ Base.convert(::Type{Quantity}, t::Tuple) = Quantity(t...)
 Base.convert(::Type{Quantity}, v::@NamedTuple{type::Int16, value::Float32, error::Float32}) = Quantity(v.type, v.value, v.error)
 
 """
-A generic 4 dimensional covariance matrix with values stored in lower triangular form
-# Fields
-- `values::SVector{10,Float32}`:  the covariance matrix values 
-"""
-struct CovMatrix4f <: POD
-    values::SVector{10,Float32}      #  the covariance matrix values 
-    CovMatrix4f(values=zero(SVector{10,Float32})) = new(values)
-end
-
-Base.convert(::Type{CovMatrix4f}, t::Tuple) = CovMatrix4f(t...)
-Base.convert(::Type{CovMatrix4f}, v::@NamedTuple{values::SVector{10,Float32}}) = CovMatrix4f(v.values)
-
-"""
-Generic vector for storing classical 4D coordinates in memory. Four momentum helper functions are in edm4hep::utils
-# Fields
-- `x::Float32`: 
-- `y::Float32`: 
-- `z::Float32`: 
-- `t::Float32`: 
-"""
-struct Vector4f <: POD
-    x::Float32                        
-    y::Float32                        
-    z::Float32                        
-    t::Float32                        
-    Vector4f(x=zero(Float32), y=zero(Float32), z=zero(Float32), t=zero(Float32)) = new(x, y, z, t)
-end
-
-Base.convert(::Type{Vector4f}, t::Tuple) = Vector4f(t...)
-Base.convert(::Type{Vector4f}, v::@NamedTuple{x::Float32, y::Float32, z::Float32, t::Float32}) = Vector4f(v.x, v.y, v.z, v.t)
-
-"""
 Vector3d
 # Fields
 - `x::Float64`: 
@@ -113,6 +111,19 @@ end
 
 Base.convert(::Type{Vector3d}, t::Tuple) = Vector3d(t...)
 Base.convert(::Type{Vector3d}, v::@NamedTuple{x::Float64, y::Float64, z::Float64}) = Vector3d(v.x, v.y, v.z)
+
+"""
+A generic 3 dimensional covariance matrix with values stored in lower triangular form
+# Fields
+- `values::SVector{6,Float32}`:  the covariance matrix values 
+"""
+struct CovMatrix3f <: POD
+    values::SVector{6,Float32}       #  the covariance matrix values 
+    CovMatrix3f(values=zero(SVector{6,Float32})) = new(values)
+end
+
+Base.convert(::Type{CovMatrix3f}, t::Tuple) = CovMatrix3f(t...)
+Base.convert(::Type{CovMatrix3f}, v::@NamedTuple{values::SVector{6,Float32}}) = CovMatrix3f(v.values)
 
 """
 A generic 6 dimensional covariance matrix with values stored in lower triangular form
@@ -156,30 +167,4 @@ end
 Base.convert(::Type{TrackState}, t::Tuple) = TrackState(t...)
 Base.convert(::Type{TrackState}, v::@NamedTuple{location::Int32, D0::Float32, phi::Float32, omega::Float32, Z0::Float32, tanLambda::Float32, time::Float32, referencePoint::Vector3f, covMatrix::CovMatrix6f}) = TrackState(v.location, v.D0, v.phi, v.omega, v.Z0, v.tanLambda, v.time, v.referencePoint, v.covMatrix)
 
-"""
-A generic 2 dimensional covariance matrix with values stored in lower triangular form
-# Fields
-- `values::SVector{3,Float32}`:  the covariance matrix values 
-"""
-struct CovMatrix2f <: POD
-    values::SVector{3,Float32}       #  the covariance matrix values 
-    CovMatrix2f(values=zero(SVector{3,Float32})) = new(values)
-end
-
-Base.convert(::Type{CovMatrix2f}, t::Tuple) = CovMatrix2f(t...)
-Base.convert(::Type{CovMatrix2f}, v::@NamedTuple{values::SVector{3,Float32}}) = CovMatrix2f(v.values)
-
-"""
-A generic 3 dimensional covariance matrix with values stored in lower triangular form
-# Fields
-- `values::SVector{6,Float32}`:  the covariance matrix values 
-"""
-struct CovMatrix3f <: POD
-    values::SVector{6,Float32}       #  the covariance matrix values 
-    CovMatrix3f(values=zero(SVector{6,Float32})) = new(values)
-end
-
-Base.convert(::Type{CovMatrix3f}, t::Tuple) = CovMatrix3f(t...)
-Base.convert(::Type{CovMatrix3f}, v::@NamedTuple{values::SVector{6,Float32}}) = CovMatrix3f(v.values)
-
-export Vector2f, Vector2i, Vector3f, Quantity, CovMatrix4f, Vector4f, Vector3d, CovMatrix6f, TrackState, CovMatrix2f, CovMatrix3f
+export CovMatrix4f, Vector2f, Vector4f, CovMatrix2f, Vector3f, Quantity, Vector3d, CovMatrix3f, CovMatrix6f, TrackState

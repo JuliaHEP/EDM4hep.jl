@@ -13,6 +13,8 @@
 - Introduced `EDCollection{ED}` to represent a collection of data of a given EDM4hep type. It is always implemented as a `StructArray` type to provide an effcient "SoA" access to the data. Added, as well, a few functions to provide an iterable and indexing behavior to the collections, and to control their lifetime (e.g. `getEDCollection`, `hasEDCollection`, `initEDCollection`, `emptyEDStore`). It replaces `EDStore` type and their functions.
 - Added more tests, in particular reading files exercising all defined types and their relations.
 - Added two new tutorials as part of the generated documentation. One to exercise the EDM4hep model (EDM), and one for reading ROOT data file (I/O).
+- Adapted to use new `events___CollectionTypeInfo` in `podio_metadata`
+
 ## 0.4.2
 - Moved to JuliaHEP organization
 - Update to FHist 0.11 series (#9)

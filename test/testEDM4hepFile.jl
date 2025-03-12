@@ -11,7 +11,7 @@ end
 reset!(c::Counter) = c.count = 41
 
 @testset "ReadEDM4hep$(T)file" for T in (:TTree, :RNTuple)
-    f = joinpath(@__DIR__, "EDM4hep_example_$T.root")
+    f = joinpath(@__DIR__, "EDM4hep_example_$T-1.root")
     reader = RootIO.Reader(f)
     events = RootIO.get(reader, "events")
 
@@ -60,9 +60,7 @@ reset!(c::Counter) = c.count = 41
             @test p.momentumAtEndpoint.z == ++(count)
             @test p.spin.x == ++(count)
             @test p.spin.y == ++(count)
-            @test p.spin.z == ++(count)
-            @test p.colorFlow.a == ++(count)
-            @test p.colorFlow.b == ++(count)    
+            @test p.spin.z == ++(count)   
         end 
         @test mcp[1].daughters[1] == mcp[2]
         @test mcp[1].parents[1] == mcp[3]
