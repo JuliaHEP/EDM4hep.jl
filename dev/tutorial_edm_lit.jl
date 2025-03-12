@@ -189,8 +189,7 @@ function convertToEDM(event, onlyFinal=false)
                    time = p |> tProd,
                    mass = p |> m,
                    vertex = Vector3d(p |> xProd, p |> yProd, p |> zProd),
-                   momentum = Vector3d(p |> px, p |> py, p |> pz),
-                   colorFlow = (p |> col, p|> acol)) |> register
+                   momentum = Vector3d(p |> px, p |> py, p |> pz)) |> register
     end
     onlyFinal && return mcps
     ## Loop over the particles in the Pythia event to create the relations (second pass)
