@@ -44,6 +44,7 @@ module RootIO
         schemaversion::VersionNumber
         collectionIDs::Dict{String, UInt32}
         collectionNames::Dict{UInt32, String}
+        collectionTypes::Union{Dict{String, String}, Nothing}
         btypes::Dict{String, Type} 
         layouts::Dict{String, Tuple}
         lazytree::LazyTree
@@ -66,11 +67,13 @@ module RootIO
                         meta = LazyTree(rtuple, ["events___CollectionTypeInfo"])[1].events___CollectionTypeInfo
                         collectionIDs = Dict(meta.name .=> meta.collectionID)
                         collectionNames = Dict(meta.collectionID .=> meta.name)
+                        collectionTypes = Dict(meta.name .=> meta.storageType)
                         schemaversion = VersionNumber(meta.schemaVersion[1]) # take the first elementsince each collection has its own schema version
                     else
                         meta = LazyTree(rtuple, ["events___idTable", "events_collectionNames",  "PodioBuildVersion"])[1]
                         collectionIDs = Dict(meta.events_collectionNames .=> meta.events___idTable)
                         collectionNames = Dict(meta.events___idTable .=> meta.events_collectionNames)
+                        collectionTypes = nothing
                         schemaversion = LazyTree(reader.files[1],"podio_metadata",["schemaVersion_events"])[1][1][1] |> VersionNumber
                     end
 
@@ -81,11 +84,13 @@ module RootIO
                         meta = LazyTree(tfile, "podio_metadata", [Regex("events___CollectionTypeInfo/events___CollectionTypeInfo.(.*)") => s"\1"])[1]
                         collectionIDs = Dict(meta.name .=> meta.collectionID)
                         collectionNames = Dict(meta.collectionID .=> meta.name)
+                        collectionTypes = Dict(meta.name .=> meta.storageType)
                         schemaversion = VersionNumber(meta.schemaVersion[1]) # take the first elementsince each collection has its own schema version
                     else
                         meta = LazyTree(tfile, "podio_metadata", [Regex("events___idTable/(.*)") => s"\1"])[1]
                         collectionIDs = Dict(meta.m_names .=> meta.m_collectionIDs)
                         collectionNames = Dict(meta.m_collectionIDs .=> meta.m_names)
+                        collectionTypes = nothing
                         if (tfile["podio_metadata"]["events___CollectionTypeInfo"] |> UnROOT.children |> length) > 3
                             schemaversion = LazyTree(tfile,"podio_metadata",["events___CollectionTypeInfo/events___CollectionTypeInfo._3"])[1][1][1] |> VersionNumber
                         else
@@ -103,6 +108,7 @@ module RootIO
                 reader.isRNTuple = isRNTuple
                 reader.collectionIDs = collectionIDs
                 reader.collectionNames = collectionNames
+                reader.collectionTypes = collectionTypes
                 reader.podioversion = podioversion
                 reader.schemaversion = schemaversion
             else
@@ -355,6 +361,7 @@ module RootIO
         else
             error("$treename is not a TTree or RNutple")
         end
+        #---return the combined LazyTree
         reader.lazytree = reduce(vcat, (LazyTree(tfile, "events", keys(reader.btypes)) for tfile in reader.files))
     end
     
