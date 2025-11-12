@@ -38,3 +38,9 @@ julia> recps.energy[1:5]
 5-element Vector{Float32}:
 ...
 ```
+## ED Model Configurations
+The `EDM4hep` Julia package is supporting the base EDM4hep event data model (default) as well as the EDM4eic model. The supported model is configured with the following commands, which need to be executed before the module is loaded.
+```
+using EDM4hep
+EDM4hep.set_edmodel("eic")     # set the EDM model to use
+```  

@@ -1,6 +1,11 @@
 
 # Release Notes
 
+## 0.4.4
+- Added support for the EIC event data model in a compatible manner. The event data model is selected with the `edmodel` module preference.
+- Use Literate generate examples
+- Added test and data file for EIC data model    
+
 ## 0.4.3
 - Ensure that you can read FCC fullsim data
 - Added example analysis_mH-recoil-fullsim.jl

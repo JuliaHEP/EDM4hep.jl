@@ -1,6 +1,6 @@
 using StructArrays
 
-include("../podio/genDatatypes.jl")
+include("../podio/genDatatypes_$(edmodel).jl")
 
 #--------------------------------------------------------------------------------------------------
 #----Utility functions for MCParticle--------------------------------------------------------------

@@ -5,9 +5,12 @@ using StaticArrays  #  Needed for fix length arrays in datatypes
 export register, relations, vmembers, Relation, PVector, ObjectID, collectionID, θ, ϕ
 export @set, @reset
 
-abstract type POD end # Abstract type to denote a POD from PODIO
+#---POD type definition-----------------------------------------------------------------------------
+abstract type edm4hep!POD end # Abstract type to denote a POD from PODIO
+const POD = edm4hep!POD
+Base.zero(::Type{T}) where T<:POD = T()
 
-include("../podio/genComponents.jl")
+include("../podio/genComponents_$(edmodel).jl")
 
 #---Vector3d
 Base.convert(::SVector{3,Float64}, v::Vector3d) = SVector{3,Float64}(v...)
@@ -73,10 +76,12 @@ Base.zero(::Type{Vector4f}) = Vector4f()
 #--------------------------------------------------------------------------------------------------
 #---ObjectID{ED}-----------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------
-struct ObjectID{ED <: POD} <: POD
+struct edm4hep!ObjectID{ED <: POD} <: POD
     index::Int32
     collectionID::UInt32    # in some cases (reading from files) the collection ID is -2
 end
+const ObjectID = edm4hep!ObjectID
+
 ObjectID(idx, collid) = ObjectID{POD}(idx,collid)
 Base.zero(::Type{ObjectID{ED}}) where ED = ObjectID{ED}(-1,0)
 Base.iszero(x::ObjectID{ED}) where ED = x.index < 0

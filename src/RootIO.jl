@@ -54,16 +54,40 @@ module RootIO
                 rtuple = tfile["podio_metadata"]
                 if rtuple isa UnROOT.RNTuple
                     isRNTuple = true
-                    meta = LazyTree(rtuple, ["events___idTable", "events_collectionNames",  "PodioBuildVersion"])[1]
-                    collectionIDs = Dict(meta.events_collectionNames .=> meta.events___idTable)
-                    collectionNames = Dict(meta.events___idTable .=> meta.events_collectionNames)
-                    podioversion = VersionNumber(meta.PodioBuildVersion...)
+                    podioversion = VersionNumber(LazyTree(rtuple, ["PodioBuildVersion"])[1].PodioBuildVersion...)
+                    if podioversion > v"1.2"
+                        meta = LazyTree(rtuple, ["events___CollectionTypeInfo"])[1].events___CollectionTypeInfo
+                        collectionIDs = Dict(meta.name .=> meta.collectionID)
+                        collectionNames = Dict(meta.collectionID .=> meta.name)
+                        collectionTypes = Dict(meta.name .=> meta.storageType)
+                        schemaversion = VersionNumber(meta.schemaVersion[1]) # take the first elementsince each collection has its own schema version
+                    else
+                        meta = LazyTree(rtuple, ["events___idTable", "events_collectionNames",  "PodioBuildVersion"])[1]
+                        collectionIDs = Dict(meta.events_collectionNames .=> meta.events___idTable)
+                        collectionNames = Dict(meta.events___idTable .=> meta.events_collectionNames)
+                        collectionTypes = nothing
+                        schemaversion = LazyTree(reader.files[1],"podio_metadata",["schemaVersion_events"])[1][1][1] |> VersionNumber
+                    end
                 else
                     isRNTuple = false
-                    meta = LazyTree(tfile, "podio_metadata", [Regex("events___idTable/|PodioBuildVersion/(.*)") => s"\1"])[1]
-                    collectionIDs = Dict(meta.m_names .=> meta.m_collectionIDs)
-                    collectionNames = Dict(meta.m_collectionIDs .=> meta.m_names)
-                    podioversion = VersionNumber(meta.major, meta.minor, meta.patch)
+                    podioversion = VersionNumber(LazyTree(tfile, "podio_metadata", [Regex("PodioBuildVersion/(.*)") => s"\1"])[1]...)
+                    if podioversion > v"1.2"   # events___CollectionTypeInfo contains a struct with everything
+                        meta = LazyTree(tfile, "podio_metadata", [Regex("events___CollectionTypeInfo/events___CollectionTypeInfo.(.*)") => s"\1"])[1]
+                        collectionIDs = Dict(meta.name .=> meta.collectionID)
+                        collectionNames = Dict(meta.collectionID .=> meta.name)
+                        collectionTypes = Dict(meta.name .=> meta.storageType)
+                        schemaversion = VersionNumber(meta.schemaVersion[1]) # take the first elementsince each collection has its own schema version
+                    else
+                        meta = LazyTree(tfile, "podio_metadata", [Regex("events___idTable/(.*)") => s"\1"])[1]
+                        collectionIDs = Dict(meta.m_names .=> meta.m_collectionIDs)
+                        collectionNames = Dict(meta.m_collectionIDs .=> meta.m_names)
+                        collectionTypes = nothing
+                        if (tfile["podio_metadata"]["events___CollectionTypeInfo"] |> UnROOT.children |> length) > 3
+                            schemaversion = LazyTree(tfile,"podio_metadata",["events___CollectionTypeInfo/events___CollectionTypeInfo._3"])[1][1][1] |> VersionNumber
+                        else
+                            schemaversion = VersionNumber(1)
+                        end
+                    end
                 end
             else
                 error("""ROOT file $(reader.filename[i]) does not have a 'podio_metadata' tree. 
@@ -246,7 +270,7 @@ module RootIO
         reader.treename = treename
         #---build a dictionary of branches and associated type
         tree = reader.files[1][treename]
-        pattern = r"(edm4hep|podio)::([a-zA-Z]+?)(Data$|$)"
+        pattern = r"(edm4hep|podio|edm4eic)::([a-zA-Z0-9]+?)(Data$|$)"
         vpattern = r"(std::)?vector<(std::)?(.*)>"
         if tree isa UnROOT.TTree
             for (i,key) in enumerate(keys(tree))
@@ -256,10 +280,19 @@ module RootIO
                 classname = result.captures[3]
                 result = match(pattern, classname)
                 if isnothing(result) # Primitive type
-                    reader.btypes[key] = builtin_types[classname]
+                    if haskey(builtin_types, classname) 
+                        reader.btypes[key] = builtin_types[classname]
+                    end
                 else
                     classname = result.captures[2]
-                    reader.btypes[key] = getproperty(EDM4hep, Symbol(classname))
+                    if hasproperty(EDM4hep, Symbol(classname))
+                        reader.btypes[key] = getproperty(EDM4hep, Symbol(classname))
+                    else
+                        @warn("""Class $classname not found in EDM4hep.jl; skipping branch $key
+                                 Please make sure you have the correct EDM model set with 'EDM4hep.set_edmodel()'""")
+                        continue
+                    end
+                    
                 end
             end
         elseif tree isa UnROOT.RNTuple

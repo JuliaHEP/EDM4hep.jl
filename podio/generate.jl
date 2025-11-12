@@ -2,10 +2,20 @@ using YAML
 using Graphs
 
 const builtin_types = Dict("int" => "Int32", "float" => "Float32", "double" => "Float64",
-"bool" => "Bool", "long" => "Int64", "unsigned int" => "UInt32", 
-"int16_t" => "Int16", "int32_t" => "Int32",  "uint64_t" => "UInt64", "uint32_t" => "UInt32", 
-"unsigned long" => "UInt64", "char" => "Char", "short" => "Int16",
-"long long" => "Int64", "unsigned long long" => "UInt64")
+    "bool" => "Bool", "long" => "Int64", "unsigned int" => "UInt32", 
+    "uint32_t" => "UInt32", "int32_t" => "Int32",  
+    "uint64_t" => "UInt64", "int64_t" => "Int64",
+    "uint16_t" => "UInt16", "int16_t" => "Int16",
+    "uint8_t" => "UInt8", "int8_t" => "Int8",
+    "unsigned long" => "UInt64", "char" => "Char", "short" => "Int16",
+    "long long" => "Int64", "unsigned long long" => "UInt64")
+
+# reserved words in Julia that cannot be used as field names
+const reserved_words = Set([
+    "break", "catch", "continue", "do", "else", "elseif", "end", "for", "function",
+    "if", "import", "in", "let", "local", "macro", "quote", "return", "try", "using",
+    "while", "with", "where"
+])
 
 const fundamental_types = [
     "Int8", "UInt8", "Int16", "UInt16", "Int32", "UInt32",
@@ -21,8 +31,8 @@ function to_julia(ctype)
     #---Primitive type
     haskey(builtin_types, ctype) && return builtin_types[ctype]
     #---edm4hep type
-    m = match(r"^edm4hep::(.*)", ctype)
-    !isnothing(m) && return m.captures[1]
+    m = match(r"^(edm4hep|edm4eic)::(.*)", ctype)
+    !isnothing(m) && return m.captures[1] * "!" * m.captures[2]
     #---std::array type
     m = match(r"std::array<([^,]+)[, ]+([0-9]+)>", ctype)
     !isnothing(m) && return "SVector{$(m.captures[2]),$(to_julia(m.captures[1]))}"
@@ -43,11 +53,13 @@ function split_member(member)
         member = m.captures[1] |> strip
     end
     sep = findlast(' ', member)
-    member[1:sep-1] |> to_julia, member[sep+1:end], comment
+    var = member[sep+1:end]
+    if var in reserved_words
+        var = var * "_"
+        comment = comment * " Renamed from $(member[sep+1:end]) due to reserved word"
+    end
+    member[1:sep-1] |> to_julia, var, comment
 end
-
-data = YAML.load_file(joinpath(@__DIR__, "edm4hep.yaml"))
-io = Base.stdout
 
 function gen_component(io, key, body)
     jtype = to_julia(key)
@@ -83,7 +95,7 @@ function gen_datatype(io, key, dtype)
     println(io, "    #---Data Members")
     members = []
     defvalues = []
-    for m in dtype["Members"]
+    for m in Base.get(dtype, "Members", [])
         t, v, c = split_member(m)
         println(io, "    $(gen_member(v,t)) $(c)")
         push!(members,v)
@@ -195,7 +207,7 @@ function gen_docstring(io, key, dtype)
     println(io, "$desc")
     !isempty(author) && println(io, "- Author: $author")
     println(io, "# Fields")
-    for m in dtype["Members"] 
+    for m in Base.get(dtype,"Members", [])
         t, v, c = split_member(m)
         println(io, "- `$v::$t`: $(c[3:end])")
     end
@@ -226,168 +238,91 @@ function gen_docstring(io, key, dtype)
     println(io,"\"\"\"")
 end
 
-#=
-function gen_structarray(io, key, dtype; podio=17)
-    jtype = to_julia(key)
-    println(io, "function StructArray{$jtype, bname}(evt::UnROOT.LazyEvent, collid = UInt32(0), len = -1) where bname")
-    first = true
-    for m in dtype["Members"] 
-        t, v, c = split_member(m)
-        if first
-            println(io, "    firstmem = getproperty(evt, Symbol(bname, :_$v))")
-            println(io, "    len = length(firstmem)")
-            println(io, "    columns = (StructArray{ObjectID{$jtype}}((collect(0:len-1),fill(collid,len))),")
-            println(io, "        firstmem,")
-            first = false
+function gen_alias(io, dtypes)
+    global exports
+    jtypes = [to_julia(k) for k in dtypes]
+    ns, cs  = zip([split(t,"!") for t in jtypes]...)
+    for ct in unique(cs)
+        ct == "ObjectID" && continue
+        ind = findall(x -> x == ct, cs)
+        if length(ind) > 1   # In case of name clash, use edm4eic!Xxx
+            println(io, "const $(cs[ind[1]]) = edm4eic!$(ct)")
         else
-            if t in fundamental_types
-                println(io, "        getproperty(evt, Symbol(bname, :_$v)),")
-            elseif startswith(t, "SVector")
-                N = match(r"SVector{([0-9]+)[, ]([^,]+)}", t).captures[1]
-                println(io, "        StructArray{$t}(reshape(getproperty(evt, Symbol(bname, \"_$v[$N]\")), $N, len);dims=1),")
-            else
-                println(io, "        StructArray{$t, Symbol(bname, :_$v)}(evt, collid, len),")
-            end 
+            println(io, "const $(cs[ind[1]]) = $(jtypes[ind[1]])")
         end
+        push!(exports, cs[ind[1]])
     end
-    if haskey(dtype, "VectorMembers")
-        for (i,r) in enumerate(dtype["VectorMembers"])
-            t, v, c = split_member(r)
-            v == "subdetectorHitNumbers" && (v = "subDetectorHitNumbers")   # adhoc fixes
-            println(io, "        StructArray{PVector{$(jtype),$(t),$(i)}, Symbol(bname, :_$v)}(evt, collid, len),")
-        end
-    end
-    n_rels = 0
-    if haskey(dtype, "OneToManyRelations")
-        for (i,r) in enumerate(dtype["OneToManyRelations"])
-            t, v, c = split_member(r)
-            println(io, "        StructArray{Relation{$(jtype),$(t),$(i)}, Symbol(bname, :_$v)}(evt, collid, len),")
-            n_rels += 1
-        end
-    end
-    if haskey(dtype, "OneToOneRelations")
-        for (i,r) in enumerate(dtype["OneToOneRelations"])
-            t, v, c = split_member(r)
-            v == "mcparticle" && (v = "MCParticle")   # adhoc fixes
-            if podio == 16
-                println(io, "        StructArray{ObjectID{$(t)}, Symbol(bname, \"#$n_rels\")}(evt, collid, len),")
-            else
-                println(io, "        StructArray{ObjectID{$(t)}, Symbol(:_, bname, \"_$v\")}(evt, collid, len),")
-            end
-            n_rels += 1
-        end
-    end
-    println(io, "    )")
-    println(io, "    return StructArray{$jtype}(columns)")
-    println(io, "end\n")
 end
-
-function gen_structarray_rntuple(io, key, dtype)
-    jtype = to_julia(key)
-    println(io, "function StructArray{$jtype}(evt::UnROOT.LazyEvent, branch::Symbol, collid = UInt32(0))")
-    println(io, "    sa = getproperty(evt, branch)")
-    first = true
-    for m in dtype["Members"] 
-        t, v, c = split_member(m)
-        if first
-            println(io, "    len = length(sa.$(v))")
-            println(io, "    fcollid = fill(collid,len)")
-            println(io, "    columns = (StructArray{ObjectID{$jtype}}((collect(0:len-1),fcollid)),")
-            println(io, "        sa.$(v),")
-            first = false
-        else
-            if t in fundamental_types || startswith(t, "SVector")
-                println(io, "        sa.$(v),")
-            else
-                println(io, "        StructArray{$(t)}(StructArrays.components(sa.$(v))),")
-            end
-        end
-    end
-    if haskey(dtype, "VectorMembers")
-        for (i,r) in enumerate(dtype["VectorMembers"])
-            t, v, c = split_member(r)
-            v == "subdetectorHitNumbers" && (v = "subDetectorHitNumbers")   # adhoc fixes
-            println(io, "        StructArray{PVector{$(jtype),$(t),$(i)}}((sa.$(v)_begin, sa.$(v)_end, fcollid)),")
-        end
-    end
-    if haskey(dtype, "OneToManyRelations")
-        for (i,r) in enumerate(dtype["OneToManyRelations"])
-            t, v, c = split_member(r)
-            println(io, "        StructArray{Relation{$(jtype),$(t),$(i)}}((sa.$(v)_begin, sa.$(v)_end, fcollid)),")
-        end
-    end
-    if haskey(dtype, "OneToOneRelations")
-        for (i,r) in enumerate(dtype["OneToOneRelations"])
-            t, v, c = split_member(r)
-            v == "mcparticle" && (v = "MCParticle")   # adhoc fixes
-            println(io, "        StructArray{ObjectID{$(t)}}(StructArrays.components(getproperty(evt, Symbol(:_, branch, :_$v)))),")
-        end
-    end
-    println(io, "    )")
-    println(io, "    return StructArray{$jtype}(columns)")
-    println(io, "end\n")
-end
-=#
 
 function build_graph(datatypes)
     types = to_julia.(keys(datatypes))
     graph = SimpleDiGraph(length(types))
     for (i,dtype) in enumerate(values(datatypes))
-        for r in [get(dtype,"OneToOneRelations",[]);get(dtype,"OneToManyRelations",[])]
+        for r in [get(dtype,"OneToOneRelations",[]);get(dtype,"OneToManyRelations",[]);get(dtype,"Members",[])]
             t = split_member(r)[1]
             t == "POD" && continue
             d = findfirst(x->x == t, types)
-            i != d && add_edge!(graph, d, i)
+            !isnothing(d) && i != d && add_edge!(graph, d, i)
         end
     end
-    graph
-end
-
-#---Components-------------------------------------------------------------------------------------
-io = open(joinpath(@__DIR__, "genComponents.jl"), "w")
-
-schema_version = data["schema_version"]
-println(io, "# Automatically generated by generate.jl from edm4hep.yaml (schema version $schema_version)")
-println(io, "schema_version = v\"$schema_version\"\n")
-
-components = data["components"]
-exports = []
-for (key,value) in pairs(components)
-    key == "edm4hep::ObjectID" && continue    # skip ObjectID (need a pametric one)
-    gen_component(io, key, value)
-    push!(exports, to_julia(key)) 
-end
-println(io, "export $(join(exports,", "))")
-close(io)
-
-#---Datatypes--------------------------------------------------------------------------------------
-io = open(joinpath(@__DIR__, "genDatatypes.jl"), "w")
-datatypes = data["datatypes"]
-exports = []
-dtypes = collect(keys(datatypes))
-graph = build_graph(datatypes)
-for i in topological_sort(graph)
-    gen_datatype(io, dtypes[i], datatypes[dtypes[i]])
-    push!(exports, to_julia(dtypes[i])) 
-end
-println(io, "export $(join(unique(exports),", "))")
-close(io)
-
-#=
-#---StructArrays--------------------------------------------------------------------------------------
-for v in (16,17)
-    local io = open(joinpath(@__DIR__, "genStructArrays-v$(v).jl"), "w")
-    local datatypes = data["datatypes"]
-    for (key,value) in pairs(datatypes)
-        gen_structarray(io, key, value; podio=v)
+    # Detect cycles
+    scc = strongly_connected_components(graph)
+    for (i, dtype) in enumerate(datatypes)
+        if any(i in comp for comp in scc if length(comp) > 1)
+            println("Datatype [$dtype] is part of a cycle")
+        end
     end
+    return graph
+end
+
+exports = []
+
+function gen_model(sections=[])
+    global exports
+    #---Load YAML files-------------------------------------------------------------------------------
+    yamls = [YAML.load_file(joinpath(@__DIR__, "edm4$(section).yaml")) for section in sections]
+    ident = sections[end]
+
+    #---Merge-----------------------------------------------------------------------------------------
+    data = Dict()
+    data["schema_version"] = yamls[end]["schema_version"]                  # take the schema version of the last one
+    data["components"] = merge(getindex.(yamls,"components")...)
+    data["datatypes"]  = merge(getindex.(yamls,"datatypes")...)
+    data["options"]    = merge(getindex.(yamls,"options")...)
+
+    #---Components-------------------------------------------------------------------------------------
+    io = open(joinpath(@__DIR__, "genComponents_$(ident).jl"), "w")
+
+    schema_version = data["schema_version"]
+    println(io, "# Automatically generated by generate.jl from edm4hep.yaml (schema version $schema_version)")
+    println(io, "schema_version = v\"$schema_version\"\n")
+
+    components = data["components"]
+    exports = []
+    ctypes = collect(keys(components))
+    graph = build_graph(components)
+    for i in topological_sort(graph)
+        ctypes[i] == "edm4hep::ObjectID" && continue    # skip ObjectID (need a pametric one)
+        gen_component(io, ctypes[i], components[ctypes[i]])
+        #push!(exports, to_julia(ctypes[i])) 
+    end
+    gen_alias(io, ctypes)
+    println(io, "export $(join(exports,", "))")
+    close(io)
+
+    #---Datatypes--------------------------------------------------------------------------------------
+    io = open(joinpath(@__DIR__, "genDatatypes_$(ident).jl"), "w")
+    datatypes = data["datatypes"]
+    exports = []
+    dtypes = collect(keys(datatypes))
+    graph = build_graph(datatypes)
+    for i in topological_sort(graph)
+        gen_datatype(io, dtypes[i], datatypes[dtypes[i]])
+    end
+    gen_alias(io, dtypes)
+    println(io, "export $(join(unique(exports),", "))")
     close(io)
 end
-io = open(joinpath(@__DIR__, "genStructArrays-rntuple.jl"), "w")
-datatypes = data["datatypes"]
-for (key,value) in pairs(datatypes)
-    gen_structarray_rntuple(io, key, value)
-end
-=#
 
-close(io)
+gen_model(["hep"])
+gen_model(["hep", "eic"])
