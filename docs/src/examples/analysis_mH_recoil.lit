@@ -89,8 +89,8 @@ myhists = (
 # - The obtained `events` is a `LazyTree` created by the [UnROOT.jl](https://github.com/JuliaHEP/UnROOT.jl) package.
 #   As the name indicates, the event is actually yet read.
 
-# f = "root://eospublic.cern.ch//eos/experiment/fcc/ee/generation/DelphesEvents/winter2023/IDEA/p8_ee_ZZ_ecm240/events_000189367.root"
-f = joinpath(@__DIR__, "../../../examples/FCC/events_000189367.root")
+f = "root://eospublic.cern.ch//eos/experiment/fcc/ee/generation/DelphesEvents/winter2023/IDEA/p8_ee_ZZ_ecm240/events_000189367.root"
+## f = joinpath(@__DIR__, "../../../examples/FCC/events_000189367.root")
 
 reader = RootIO.Reader(f);
 events = RootIO.get(reader, "events");

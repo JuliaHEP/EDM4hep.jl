@@ -137,6 +137,16 @@ elapsed2 = @elapsed do_analysis!(data, myanalysis!, reader, events; mt=true)
 println("MT[$N]: total time: $elapsed2, $(data.pevts/elapsed2) events/s. Selected events: $(data.sevts)")
 println("Speeedup: $(elapsed1/elapsed2)")
 
+# Let's repeat the analysis with and without multi-threading 
+
+data = AnalysisData()
+elapsed1 = @elapsed do_analysis!(data, myanalysis!, reader, events; mt=false)
+println("Serial: total time: $elapsed1, $(data.pevts/elapsed1) events/s. Selected events: $(data.sevts)")
+
+elapsed2 = @elapsed do_analysis!(data, myanalysis!, reader, events; mt=true)
+println("MT[$N]: total time: $elapsed2, $(data.pevts/elapsed2) events/s. Selected events: $(data.sevts)")
+println("Speeedup: $(elapsed1/elapsed2)")
+
 # ## Plot the results
 # Z candidates
 

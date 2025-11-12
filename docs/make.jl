@@ -8,7 +8,7 @@ project = @__DIR__
 function process_literate(names...)
     examples_mds = []
     for name in names
-        run(`julia --project=$project docs/literate.jl $name`)
+        run(`julia --threads=auto --project=$project docs/literate.jl $name`)
         push!(examples_mds, "examples/$name.md")
     end
     return examples_mds
