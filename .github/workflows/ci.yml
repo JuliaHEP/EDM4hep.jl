@@ -31,11 +31,11 @@ jobs:
           version: ${{ matrix.version }}
           arch: ${{ matrix.arch }}
       - uses: julia-actions/cache@v2
-      - name: Set Preferences
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: Set preferences
         run: julia --project -e '
           using Preferences
           Preferences.set_preferences!("EDM4hep", "edmodel" => "${{ matrix.edmodel }}"; force=true)'
-      - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
         env:
           JULIA_NUM_THREADS: "3"
