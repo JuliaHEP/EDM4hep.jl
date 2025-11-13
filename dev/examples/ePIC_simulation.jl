@@ -57,3 +57,11 @@ for mcp in mcps[1:10]                        # Loop over the first N MC particle
 end
 
 mcps[length.(mcps.daughters) .== 0].energy |> sum
+
+hsumenergy = H1D("Summed energy final particles", 100, 200., 300.; unit=:GeV)
+for evt in events
+    mcps   = get_mcps(evt)        # Get the coll. of MC particles. Used to get .energy
+    sumenergy = mcps[length.(mcps.daughters) .== 0].energy |> sum
+    push!(hsumenergy, sumenergy)
+end
+plot(hsumenergy)
