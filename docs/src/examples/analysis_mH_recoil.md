@@ -1,34 +1,49 @@
-# # FCCee Analysis Examples
-# 
-# Using the example `higgs/mH-recoil/mumu` from [FCCAnalyses](https://github.com/HEP-FCC/FCCAnalyses)
+```@meta
+EditURL = "analysis_mH_recoil.lit"
+```
 
+# FCCee Analysis Examples
 
-#md # !!! note "Note that"
-#md #     You can also download this example as a
-#md #     [Jupyter notebook](analysis_mH_recoil.ipynb) and a plain
-#md #     [Julia source file](analysis_mH_recoil.jl).
-#
-#md # #### Table of contents
-#md # ```@contents
-#md # Pages = ["analysis_mH_recoil.md"]
-#md # Depth = 2:3
-#md # ```
+Using the example `higgs/mH-recoil/mumu` from [FCCAnalyses](https://github.com/HEP-FCC/FCCAnalyses)
 
-# ## Load the necessary modules
+!!! note "Note that"
+    You can also download this example as a
+    [Jupyter notebook](analysis_mH_recoil.ipynb) and a plain
+    [Julia source file](analysis_mH_recoil.jl).
+
+#### Table of contents
+```@contents
+Pages = ["analysis_mH_recoil.md"]
+Depth = 2:3
+```
+
+## Load the necessary modules
+
+````julia
 using EDM4hep
 using EDM4hep.RootIO
 using EDM4hep.SystemOfUnits
 using EDM4hep.Histograms
 using Plots; gr()
 theme(:boxed)
+````
 
-# ## Definition of some analysis functions
-# These are couple of examples of high-level functions that makes use of `ReconstructedParticle`
-# objects to build resonances and recoils. 
-# They make use of standard Julia functions to generate combinations, to sort a vector,
-# and to work with LorentzVectors.
+````
+Precompiling packages...
+   5648.9 ms  ✓ EDM4hep → EDM4hepPlotsExt
+  1 dependency successfully precompiled in 6 seconds. 268 already precompiled.
 
-# re-using convenient existing packages 
+````
+
+## Definition of some analysis functions
+These are couple of examples of high-level functions that makes use of `ReconstructedParticle`
+objects to build resonances and recoils.
+They make use of standard Julia functions to generate combinations, to sort a vector,
+and to work with LorentzVectors.
+
+re-using convenient existing packages
+
+````julia
 using LorentzVectorHEP
 using Combinatorics
 
@@ -65,12 +80,14 @@ function recoilBuilder(comenergy::AbstractFloat, in::AbstractVector{Reconstructe
     push!(result, ReconstructedParticle(mass=mass(recoil_lv), momentum=(recoil_lv.x, recoil_lv.y, recoil_lv.z)))
     return result
 end;
+````
 
-# ## Defining the histograms
-# We create a custom structure with all the histograms intialized with their binning, 
-# units and titles. We use and the way of plotting them. 
-# We use the module `Parameters` that allows to create user structures with defaults.
+## Defining the histograms
+We create a custom structure with all the histograms intialized with their binning,
+units and titles. We use and the way of plotting them.
+We use the module `Parameters` that allows to create user structures with defaults.
 
+````julia
 myhists = (
     mz          = H1D("m_{Z}",125,0,250, unit=:GeV),
     mz_zoom     = H1D("m_{Z} (zoom)",40,80,100, unit=:GeV),
@@ -83,20 +100,24 @@ myhists = (
     lr_m_zoom5  = H1D("Z leptonic recoil (zoom)", 100, 130.3, 132.5, unit=:GeV),
     mz_lr_m     = H2D("m_{Z} vs Z leptonic recoil", 40, 80, 100, 100, 120, 140, units=(:GeV, :GeV)),
 );
+````
 
-# ## Open the data file to get the events
-# - It is using a file in EOS with the `root:` protocol
-# - The obtained `events` is a `LazyTree` created by the [UnROOT.jl](https://github.com/JuliaHEP/UnROOT.jl) package.
-#   As the name indicates, the event is actually yet read.
+## Open the data file to get the events
+- It is using a file in EOS with the `root:` protocol
+- The obtained `events` is a `LazyTree` created by the [UnROOT.jl](https://github.com/JuliaHEP/UnROOT.jl) package.
+  As the name indicates, the event is actually yet read.
 
-## f = "root://eospublic.cern.ch//eos/experiment/fcc/ee/generation/DelphesEvents/winter2023/IDEA/p8_ee_ZZ_ecm240/events_000189367.root"
+````julia
+# f = "root://eospublic.cern.ch//eos/experiment/fcc/ee/generation/DelphesEvents/winter2023/IDEA/p8_ee_ZZ_ecm240/events_000189367.root"
 f = joinpath(@__DIR__, "../../../examples/FCC/events_000189367.root")
 
 reader = RootIO.Reader(f);
 events = RootIO.get(reader, "events");
+````
 
-# ## Loop over events and fill the histograms
+## Loop over events and fill the histograms
 
+````julia
 @time for evt in events
     muids = RootIO.get(reader, evt, "Muon#0")     # get the ObjectIDs of Muons
     length(muids) < 2 && continue                 # need at least 2 muons to build a Z
@@ -124,8 +145,26 @@ events = RootIO.get(reader, "events");
         end
     end
 end
+````
 
-# ## Plot the results
+````
+ 11.709493 seconds (24.92 M allocations: 4.544 GiB, 8.29% gc time, 63.14% compilation time)
 
+````
+
+## Plot the results
+
+````julia
 plot((plot(h) for h in myhists)..., layout=(5,2), size=(1200,1500))
+````
+
+````
+
+
+ERROR: FieldError: type EDM4hep.Histograms.H2D has no field `usym`, available fields: `title`, `hist`, `unit`, `uval`
+````
+
+---
+
+*This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
 

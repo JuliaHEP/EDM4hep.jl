@@ -1,20 +1,3 @@
-# # FCCee Analysis Examples
-# 
-# Using the example `higgs/mH-recoil/mumu` from [FCCAnalyses](https://github.com/HEP-FCC/FCCAnalyses)
-
-
-#md # !!! note "Note that"
-#md #     You can also download this example as a
-#md #     [Jupyter notebook](analysis_mH_recoil.ipynb) and a plain
-#md #     [Julia source file](analysis_mH_recoil.jl).
-#
-#md # #### Table of contents
-#md # ```@contents
-#md # Pages = ["analysis_mH_recoil.md"]
-#md # Depth = 2:3
-#md # ```
-
-# ## Load the necessary modules
 using EDM4hep
 using EDM4hep.RootIO
 using EDM4hep.SystemOfUnits
@@ -22,13 +5,6 @@ using EDM4hep.Histograms
 using Plots; gr()
 theme(:boxed)
 
-# ## Definition of some analysis functions
-# These are couple of examples of high-level functions that makes use of `ReconstructedParticle`
-# objects to build resonances and recoils. 
-# They make use of standard Julia functions to generate combinations, to sort a vector,
-# and to work with LorentzVectors.
-
-# re-using convenient existing packages 
 using LorentzVectorHEP
 using Combinatorics
 
@@ -66,11 +42,6 @@ function recoilBuilder(comenergy::AbstractFloat, in::AbstractVector{Reconstructe
     return result
 end;
 
-# ## Defining the histograms
-# We create a custom structure with all the histograms intialized with their binning, 
-# units and titles. We use and the way of plotting them. 
-# We use the module `Parameters` that allows to create user structures with defaults.
-
 myhists = (
     mz          = H1D("m_{Z}",125,0,250, unit=:GeV),
     mz_zoom     = H1D("m_{Z} (zoom)",40,80,100, unit=:GeV),
@@ -84,18 +55,11 @@ myhists = (
     mz_lr_m     = H2D("m_{Z} vs Z leptonic recoil", 40, 80, 100, 100, 120, 140, units=(:GeV, :GeV)),
 );
 
-# ## Open the data file to get the events
-# - It is using a file in EOS with the `root:` protocol
-# - The obtained `events` is a `LazyTree` created by the [UnROOT.jl](https://github.com/JuliaHEP/UnROOT.jl) package.
-#   As the name indicates, the event is actually yet read.
-
-## f = "root://eospublic.cern.ch//eos/experiment/fcc/ee/generation/DelphesEvents/winter2023/IDEA/p8_ee_ZZ_ecm240/events_000189367.root"
+# f = "root://eospublic.cern.ch//eos/experiment/fcc/ee/generation/DelphesEvents/winter2023/IDEA/p8_ee_ZZ_ecm240/events_000189367.root"
 f = joinpath(@__DIR__, "../../../examples/FCC/events_000189367.root")
 
 reader = RootIO.Reader(f);
 events = RootIO.get(reader, "events");
-
-# ## Loop over events and fill the histograms
 
 @time for evt in events
     muids = RootIO.get(reader, evt, "Muon#0")     # get the ObjectIDs of Muons
@@ -125,7 +89,4 @@ events = RootIO.get(reader, "events");
     end
 end
 
-# ## Plot the results
-
 plot((plot(h) for h in myhists)..., layout=(5,2), size=(1200,1500))
-
