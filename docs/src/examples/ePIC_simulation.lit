@@ -130,3 +130,12 @@ end
 mcps[length.(mcps.daughters) .== 0].energy |> sum
 
 # Should be equal or close to the sum of the energy of the incident electron and proton (18+275)
+# Let's see what is the distribution for all events
+
+hsumenergy = H1D("Summed energy final particles", 100, 200., 300.; unit=:GeV)
+for evt in events
+    mcps   = get_mcps(evt)        # Get the coll. of MC particles. Used to get .energy
+    sumenergy = mcps[length.(mcps.daughters) .== 0].energy |> sum
+    push!(hsumenergy, sumenergy)
+end
+plot(hsumenergy)
