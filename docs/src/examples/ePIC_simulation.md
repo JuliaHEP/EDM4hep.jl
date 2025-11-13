@@ -42,7 +42,7 @@ using LinearAlgebra
 
 ````
 Precompiling packages...
-   5496.7 ms  ✓ EDM4hep → EDM4hepPlotsExt
+   5339.0 ms  ✓ EDM4hep → EDM4hepPlotsExt
   1 dependency successfully precompiled in 6 seconds. 268 already precompiled.
 
 ````

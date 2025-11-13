@@ -5,24 +5,25 @@ using Literate
 using Preferences
 
 project = @__DIR__
-function process_literate(names...)
-    examples_mds = []
+function process_literate(subdir, names...)
+    mds = []
     for name in names
-        run(`julia --threads=auto --project=$project docs/literate.jl $name`)
-        push!(examples_mds, "examples/$name.md")
+        run(`julia --threads=auto --project=$project docs/literate.jl $subdir $name`)
+        push!(mds, "$subdir/$name.md")
     end
-    return examples_mds
+    return mds
 end
 
 savmodel = EDM4hep.get_edmodel()
 
 # Set preferences for the examples "hep" model
 EDM4hep.set_edmodel("hep")
-FCC_mds    = process_literate("analysis_mH_recoil", "analysis_mH_recoil-MT")
+FCC_mds    = process_literate("examples", "analysis_mH_recoil", "analysis_mH_recoil-MT")
+tutorials_mds = process_literate("tutorials", "tutorial_edm", "tutorial_io")
 
 # Set preferences for the examples "eic" model
 EDM4hep.set_edmodel("eic")
-EIC_mds    = process_literate("ePIC_simulation")
+EIC_mds    = process_literate("examples", "ePIC_simulation")
 
 # Restore saved model
 EDM4hep.set_edmodel(savmodel)
@@ -39,6 +40,7 @@ makedocs(;
         "Introduction" => "index.md",
         "Public APIs" => "api.md",
         "Release Notes" => "release_notes.md",
+        "Tutorials" => tutorials_mds,
         "Examples" => [ 
             "FCC" => FCC_mds,
             "EIC" => EIC_mds

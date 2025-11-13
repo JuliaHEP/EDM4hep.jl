@@ -30,7 +30,7 @@ theme(:boxed)
 
 ````
 Precompiling packages...
-   5648.9 ms  ✓ EDM4hep → EDM4hepPlotsExt
+   5297.9 ms  ✓ EDM4hep → EDM4hepPlotsExt
   1 dependency successfully precompiled in 6 seconds. 268 already precompiled.
 
 ````
@@ -148,7 +148,7 @@ end
 ````
 
 ````
- 11.709493 seconds (24.92 M allocations: 4.544 GiB, 8.29% gc time, 63.14% compilation time)
+ 11.526876 seconds (24.92 M allocations: 4.544 GiB, 8.65% gc time, 62.92% compilation time)
 
 ````
 
