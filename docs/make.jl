@@ -52,6 +52,6 @@ makedocs(;
 
 deploydocs(;
     repo="github.com/JuliaHEP/EDM4hep.jl",
-    devbranch="v0-patches"
+    devbranch="v0-patches",
     push_preview = true
 )
