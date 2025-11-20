@@ -43,8 +43,8 @@ using Plots: plot, plot!, theme
 ````
 
 
-ERROR: ArgumentError: Package PYTHIA8 not found in current path.
-- Run `import Pkg; Pkg.add("PYTHIA8")` to install the PYTHIA8 package.
+ERROR: ArgumentError: Package DisplayAs not found in current path.
+- Run `import Pkg; Pkg.add("DisplayAs")` to install the DisplayAs package.
 ````
 
 ## Create a collection of MCParticles in memory
@@ -197,10 +197,23 @@ end
 ````
 
 ````
+MCParticle #1 with PDG=2212 and momentum (0.0, 0.0, 7000.0) has 3 daughters
+   ---> #2 with PDG=1 and momentum (0.75, -1.569, 32.191)
+   ---> #5 with PDG=-24 and momentum (1.517, -20.68, -20.605)
+   ---> #6 with PDG=22 and momentum (-3.813, 0.113, -1.833)
+MCParticle #2 with PDG=1 and momentum (0.75, -1.569, 32.191) has 0 daughters
+MCParticle #3 with PDG=2212 and momentum (0.0, 0.0, -7000.0) has 3 daughters
+   ---> #4 with PDG=-2 and momentum (-3.047, -19.0, -54.629)
+   ---> #5 with PDG=-24 and momentum (1.517, -20.68, -20.605)
+   ---> #6 with PDG=22 and momentum (-3.813, 0.113, -1.833)
+MCParticle #4 with PDG=-2 and momentum (-3.047, -19.0, -54.629) has 0 daughters
+MCParticle #5 with PDG=-24 and momentum (1.517, -20.68, -20.605) has 2 daughters
+   ---> #7 with PDG=1 and momentum (-2.445, 28.816, 6.082)
+   ---> #8 with PDG=-2 and momentum (3.962, -49.498, -26.687)
+MCParticle #6 with PDG=22 and momentum (-3.813, 0.113, -1.833) has 0 daughters
+MCParticle #7 with PDG=1 and momentum (-2.445, 28.816, 6.082) has 0 daughters
+MCParticle #8 with PDG=-2 and momentum (3.962, -49.498, -26.687) has 0 daughters
 
-
-ERROR: UndefVarError: `getEDCollection` not defined in `Main.var"##277"`
-Suggestion: check for spelling errors or missing imports.
 ````
 
 ### One-to-one relations
@@ -208,22 +221,12 @@ The type `SimTrackerHit` has a one-to-one relation with the type `MCParticle`. L
 particle in the tree. We use the keyword argument `particle` to associate the hit to the particle, like this:
 
 ````julia
-hit = SimTrackerHit(cellID=0xabadcaffee, eDep=0.1, position=(0.0, 0.0, 0.0), particle=p7);
+hit = SimTrackerHit(cellID=0xabadcaffee, EDep=0.1, position=(0.0, 0.0, 0.0), mcparticle=p7);
+println("index=$(hit.index)")
 ````
 
 ````
-
-
-ERROR: MethodError: no method matching EDM4hep.edm4hep!SimTrackerHit(; cellID::UInt64, eDep::Float64, position::Tuple{Float64, Float64, Float64}, particle::EDM4hep.edm4hep!MCParticle)
-This method does not support all of the given keyword arguments (and may not support any).
-
-Closest candidates are:
-  EDM4hep.edm4hep!SimTrackerHit(!Matched::EDM4hep.edm4hep!ObjectID{EDM4hep.edm4hep!SimTrackerHit}, !Matched::UInt64, !Matched::Float32, !Matched::Float32, !Matched::Float32, !Matched::Int32, !Matched::EDM4hep.edm4hep!Vector3d, !Matched::EDM4hep.edm4hep!Vector3f, !Matched::EDM4hep.edm4hep!ObjectID{EDM4hep.edm4hep!MCParticle}) got unsupported keyword arguments "cellID", "eDep", "position", "particle"
-   @ EDM4hep ~/Development/EDM4hep.jl/podio/genDatatypes_hep.jl:1126
-  EDM4hep.edm4hep!SimTrackerHit(!Matched::Any, !Matched::Any, !Matched::Any, !Matched::Any, !Matched::Any, !Matched::Any, !Matched::Any, !Matched::Any, !Matched::Any) got unsupported keyword arguments "cellID", "eDep", "position", "particle"
-   @ EDM4hep ~/Development/EDM4hep.jl/podio/genDatatypes_hep.jl:1126
-  EDM4hep.edm4hep!SimTrackerHit(; cellID, EDep, time, pathLength, quality, position, momentum, mcparticle) got unsupported keyword arguments "eDep", "particle"
-   @ EDM4hep ~/Development/EDM4hep.jl/podio/genDatatypes_hep.jl:1139
+index=#0
 
 ````
 
@@ -235,10 +238,8 @@ println("index=$(hit.index)")
 ````
 
 ````
+index=#0
 
-
-ERROR: UndefVarError: `hit` not defined in `Main.var"##277"`
-Suggestion: add an appropriate import or assignment. This global was declared but not assigned.
 ````
 
 The value #0 indicates that is not registered. To register it, we can use the function `register` to the default `EDCollection`
@@ -249,25 +250,21 @@ println("index=$(nhit.index)")
 ````
 
 ````
+index=#1
 
-
-ERROR: UndefVarError: `hit` not defined in `Main.var"##277"`
-Suggestion: add an appropriate import or assignment. This global was declared but not assigned.
 ````
 
 Now the hit is registered and can be accessed by the `getEDCollection` function
 
 ````julia
 for h in getEDCollection(SimTrackerHit)
-    println("SimTrackerHit in cellID=$(string(h.cellID, base=16)) with eDep=$(h.eDep) and position=$(h.position) associated to particle $(h.particle.index)")
+    println("SimTrackerHit in cellID=$(string(h.cellID, base=16)) with eDep=$(h.EDep) and position=$(h.position) associated to mcparticle $(h.mcparticle.index)")
 end
 ````
 
 ````
+SimTrackerHit in cellID=abadcaffee with eDep=0.1 and position=(0.0, 0.0, 0.0) associated to mcparticle #7
 
-
-ERROR: UndefVarError: `getEDCollection` not defined in `Main.var"##277"`
-Suggestion: check for spelling errors or missing imports.
 ````
 
 Alternatively, instead of using the `register` function, we can also use the function `push!` to a specific `EDCollection`.
@@ -277,15 +274,14 @@ hitcollection = EDCollection{SimTrackerHit}()
 push!(hitcollection, hit)
 push!(hitcollection, hit)
 for h in hitcollection
-    println("SimTrackerHit in cellID=$(string(h.cellID, base=16)) with eDep=$(h.eDep) and position=$(h.position) associated to particle $(h.particle.index)")
+    println("SimTrackerHit in cellID=$(string(h.cellID, base=16)) with eDep=$(h.EDep) and position=$(h.position) associated to mcparticle $(h.mcparticle.index)")
 end
 ````
 
 ````
+SimTrackerHit in cellID=abadcaffee with eDep=0.1 and position=(0.0, 0.0, 0.0) associated to mcparticle #7
+SimTrackerHit in cellID=abadcaffee with eDep=0.1 and position=(0.0, 0.0, 0.0) associated to mcparticle #7
 
-
-ERROR: UndefVarError: `EDCollection` not defined in `Main.var"##277"`
-Suggestion: check for spelling errors or missing imports.
 ````
 
 ### One-to-many relations
@@ -295,8 +291,8 @@ Functions `pushToTrackerHits` and `popFromTrackerHits` are provided
 to create the relation between the `Track` and the `TrackerHit`.
 
 ````julia
-t_hit1 = TrackerHit3D(cellID=0x1, eDep=0.1, position=(1., 1., 1.))
-t_hit2 = TrackerHit3D(cellID=0x1, eDep=0.2, position=(2., 2., 2.))
+t_hit1 = TrackerHit(cellID=0x1, eDep=0.1, position=(1., 1., 1.))
+t_hit2 = TrackerHit(cellID=0x1, eDep=0.2, position=(2., 2., 2.))
 track = Track()
 track = pushToTrackerHits(track, t_hit1)
 track = pushToTrackerHits(track, t_hit2)
@@ -307,10 +303,10 @@ end
 ````
 
 ````
+Track has 2 hits
+TrackerHit in cellID=1 with eDep=0.1 and position=(1.0, 1.0, 1.0)
+TrackerHit in cellID=1 with eDep=0.2 and position=(2.0, 2.0, 2.0)
 
-
-ERROR: UndefVarError: `TrackerHit3D` not defined in `Main.var"##277"`
-Suggestion: check for spelling errors or missing imports.
 ````
 
 The `Track` object has a `trackerHits` property that can be iterated and index of `TrackerHit3D` objects.
@@ -321,10 +317,9 @@ println("Hit 2: $(track.trackerHits[2])")
 ````
 
 ````
+Hit 1: EDM4hep.edm4hep!TrackerHit(#1, 0x0000000000000001, 0, 0, 0.0f0, 0.1f0, 0.0f0, (1.0, 1.0, 1.0), Float32[0.0, 0.0, 0.0, 0.0, 0.0, 0.0], EDM4hep.edm4hep!ObjectID[])
+Hit 2: EDM4hep.edm4hep!TrackerHit(#2, 0x0000000000000001, 0, 0, 0.0f0, 0.2f0, 0.0f0, (2.0, 2.0, 2.0), Float32[0.0, 0.0, 0.0, 0.0, 0.0, 0.0], EDM4hep.edm4hep!ObjectID[])
 
-
-ERROR: UndefVarError: `track` not defined in `Main.var"##277"`
-Suggestion: check for spelling errors or missing imports.
 ````
 
 We can remove the hits from the track using the `popFromTrackerHits` function
@@ -338,10 +333,9 @@ println("After pop Track has $(length(track.trackerHits)) hits")
 ````
 
 ````
+TrackerHit in cellID=1 with eDep=0.1 and position=(1.0, 1.0, 1.0)
+After pop Track has 1 hits
 
-
-ERROR: UndefVarError: `track` not defined in `Main.var"##277"`
-Suggestion: add an appropriate import or assignment. This global was declared but not assigned.
 ````
 
 ## Convert PYTHIA event to MCParticles
@@ -416,23 +410,13 @@ pythia |> next
 ````
 
 ````
-
-
-ERROR: UndefVarError: `PYTHIA8` not defined in `Main.var"##277"`
-Suggestion: check for spelling errors or missing imports.
+true
 ````
 
 We convert now the PYTHIA event to `MCParticles` (only final particles in this case)
 
 ````julia
 mcps = convertToEDM(event(pythia), true);
-````
-
-````
-
-
-ERROR: UndefVarError: `event` not defined in `Main.var"##277"`
-Suggestion: check for spelling errors or missing imports.
 ````
 
 Lets's see if the conversion was successful and the set of particles conserves the energy, charge and momentum
@@ -444,10 +428,10 @@ println("Total momentum = $(sum(mcps.momentum))")
 ````
 
 ````
+Total energy = 8000.000000002224
+Total charge = 2.0
+Total momentum = (-1.162767798712494e-12, -1.4501039258263404e-11, -3.2586150444657846e-9)
 
-
-ERROR: UndefVarError: `mcps` not defined in `Main.var"##277"`
-Suggestion: add an appropriate import or assignment. This global was declared but not assigned.
 ````
 
 We recover here ths center-of-mass energy, the total charge of 2 from the incident protons and the
@@ -468,10 +452,7 @@ end
 ````
 
 ````
-
-
-ERROR: UndefVarError: `event` not defined in `Main.var"##277"`
-Suggestion: check for spelling errors or missing imports.
+printdecay (generic function with 1 method)
 ````
 
 Lets use the function to print the decay trees of all the particles in the event
@@ -485,10 +466,27 @@ end
 ````
 
 ````
+D*(2010)+ E=21.19860762618098
+   ---> D0 E=19.262716101579205
+      ---> K- E=1.7790162926959867
+      ---> pi+ E=3.2296583357290447
+      ---> pi0 E=14.254041473154173
+         ---> gamma0 E=2.43102586324752
+         ---> gamma0 E=11.823015609906655
+   ---> pi+ E=1.935891524601776
+~D0 E=2.403330758042616
+   ---> K(S)0 E=0.9760106714347322
+      ---> pi+ E=0.3821855807359186
+      ---> pi- E=0.5938250906988135
+   ---> pi- E=0.46240892829773794
+   ---> pi+ E=0.964911158310146
+D0 E=19.262716101579205
+   ---> K- E=1.7790162926959867
+   ---> pi+ E=3.2296583357290447
+   ---> pi0 E=14.254041473154173
+      ---> gamma0 E=2.43102586324752
+      ---> gamma0 E=11.823015609906655
 
-
-ERROR: UndefVarError: `mcps` not defined in `Main.var"##277"`
-Suggestion: add an appropriate import or assignment. This global was declared but not assigned.
 ````
 
 In another event we get obviously a different set of particles and decay trees.
@@ -503,10 +501,20 @@ end
 ````
 
 ````
+~D0 E=2.172578466263012
+   ---> K+ E=1.1148822395878395
+   ---> pi- E=0.26832433461766125
+   ---> pi0 E=0.7893718920575111
+      ---> gamma0 E=0.6722912205599286
+      ---> gamma0 E=0.11708067149758256
+D+ E=2.872932301847668
+   ---> mu+ E=0.7849011434788805
+   ---> nu(mu)0 E=1.0712971047644975
+   ---> K0 E=1.0167340536042895
+      ---> K(S)0 E=1.0167340536042895
+         ---> pi+ E=0.6549893520142125
+         ---> pi- E=0.36174470159007716
 
-
-ERROR: UndefVarError: `pythia` not defined in `Main.var"##277"`
-Suggestion: add an appropriate import or assignment. This global was declared but not assigned.
 ````
 
 ---

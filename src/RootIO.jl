@@ -19,7 +19,13 @@ module RootIO
     "int16_t" => Int16, "int32_t" => Int32,  "uint64_t" => UInt64, "uint32_t" => UInt32, 
     "unsigned long" => UInt64, "char" => Char, "short" => Int16,
     "long long" => Int64, "unsigned long long" => UInt64,
-    "string" => String)
+    "string" => String, 
+    "vector<int>" => Vector{Int32}, 
+    "vector<float>" => Vector{Float32}, 
+    "vector<double>" => Vector{Float64},
+    "vector<bool>" => Vector{Bool},
+    "vector<long>" => Vector{Int64},
+    "vector<string>" => Vector{String})
 
     const newpodio = v"0.16.99"
     const _isnewpodio = Ref(false)
@@ -35,8 +41,10 @@ module RootIO
         files::Vector{ROOTFile}
         isRNTuple::Bool
         podioversion::VersionNumber
+        schemaversion::VersionNumber
         collectionIDs::Dict{String, UInt32}
         collectionNames::Dict{UInt32, String}
+        collectionTypes::Union{Dict{String, String}, Nothing}
         btypes::Dict{String, Type} 
         layouts::Dict{String, Tuple}
         lazytree::LazyTree
@@ -68,6 +76,7 @@ module RootIO
                         collectionTypes = nothing
                         schemaversion = LazyTree(reader.files[1],"podio_metadata",["schemaVersion_events"])[1][1][1] |> VersionNumber
                     end
+
                 else
                     isRNTuple = false
                     podioversion = VersionNumber(LazyTree(tfile, "podio_metadata", [Regex("PodioBuildVersion/(.*)") => s"\1"])[1]...)
@@ -99,10 +108,13 @@ module RootIO
                 reader.isRNTuple = isRNTuple
                 reader.collectionIDs = collectionIDs
                 reader.collectionNames = collectionNames
+                reader.collectionTypes = collectionTypes
                 reader.podioversion = podioversion
+                reader.schemaversion = schemaversion
             else
                 reader.isRNTuple != isRNTuple && error("File list is not uniform ROOT I/O format (TTree/RNTuple) for file $(reader.filename[i])")
                 reader.podioversion != podioversion && error("File list is not uniform PODIO version. $(reader.podioversion) != $(podioversion) for file $(reader.filename[i])")
+                reader.schemaversion != schemaversion && error("File list is not uniform Schema version. $(reader.schemaversion) != $(schemaversion) for file $(reader.filename[i])")
             end
         end
         if reader.podioversion >= newpodio
@@ -122,7 +134,6 @@ module RootIO
             include(joinpath(@__DIR__,"../podio/genStructArrays-rntuple.jl"))
         end
         =#
-        setCollectionNames(reader.collectionNames)    # remember the collection names
         return reader
     end
 
@@ -132,6 +143,7 @@ module RootIO
         data1 = [hcat([i == 1 ? "File Name(s)" : "" for i in 1:nfiles], r.filename);
                  "# of events" nevents;
                  "IO Format" r.isRNTuple ? "RNTuple" : "TTree";
+                 "EDM4hep schema" r.schemaversion;
                  "PODIO version" r.podioversion;
                  "ROOT version" VersionNumber(r.files[1].format_version÷10000, r.files[1].format_version%10000÷100, r.files[1].format_version%100)]
         pretty_table(io, data1, header=["Attribute", "Value"], alignment=:l)
@@ -170,44 +182,69 @@ module RootIO
         (T, (), Tuple(relations), Tuple(vmembers))
     end
 
-    #---StructArray constructors--------------------------------------------------------------------
+    const missing_columns = Dict{Symbol, Bool}()
 
+    #---Replace getproperty by a more tolerant getcolumn-------------------------------------------    
+    function getcolumn(evt::UnROOT.LazyEvent, bname::Symbol, val::T, len::Int) where T
+        if hasproperty(evt, bname)
+            return getproperty(evt, bname)
+        else
+            if !haskey(missing_columns, bname)
+                @warn "Column $bname not found in the tree"
+                missing_columns[bname] = true
+            end 
+            return fill(val, len)
+        end
+    end
+
+    #---StructArray constructors--------------------------------------------------------------------
     @inline function StructArray{Relation{ED,TD,N}, bname}(evt::UnROOT.LazyEvent, collid, len) where {ED,TD,N,bname}
-        StructArray{Relation{ED,TD,N}}((getproperty(evt, Symbol(bname, :_begin)), getproperty(evt, Symbol(bname, :_end)), fill(collid,len)))
+        StructArray{Relation{ED,TD,N}}((getcolumn(evt, Symbol(bname, :_begin), 0x00000000, len), 
+                                        getcolumn(evt, Symbol(bname, :_end), 0x00000000, len), fill(collid,len)))
     end
     @inline function StructArray{PVector{ED,T, N}, bname}(evt::UnROOT.LazyEvent, collid, len) where {ED,T,N,bname}
-        StructArray{PVector{ED,T,N}}((getproperty(evt, Symbol(bname, :_begin)), getproperty(evt, Symbol(bname, :_end)), fill(collid,len)))
+        StructArray{PVector{ED,T,N}}((getcolumn(evt, Symbol(bname, :_begin), 0x00000000, len), 
+                                      getcolumn(evt, Symbol(bname, :_end), 0x00000000, len), fill(collid,len)))
     end
     @inline function StructArray{SVector{N,T}, bname}(evt::UnROOT.LazyEvent, collid, len) where {N,T,bname}
         StructArray{SVector{N,T}}(reshape(getproperty(evt, Symbol(bname, "[$N]")), N, len);dims=1)
     end
     @inline function StructArray{ObjectID{ED}, bname}(evt::UnROOT.LazyEvent, collid = UInt32(0), len = -1) where {ED,bname}
-        inds = getproperty(evt, Symbol(bname, :_index))
-        cids = getproperty(evt, Symbol(bname, :_collectionID))
+        inds = getcolumn(evt, Symbol(bname, :_index), -1, len)
+        cids = getcolumn(evt, Symbol(bname, :_collectionID), 0x00000000, len)
         #len > 0 && cids[1] == -2 && fill!(cids, 0)      # Handle the case collid is -2 :-( )
         replace!(cids, -2 => 0)
         StructArray{ObjectID{ED}}((inds, cids))
     end
     @inline function StructArray{ObjectID, bname}(evt::UnROOT.LazyEvent, collid = UInt32(0), len = -1) where {bname}
-        inds = getproperty(evt, Symbol(bname, :_index))
-        cids = getproperty(evt, Symbol(bname, :_collectionID))
+        inds = getcolumn(evt, Symbol(bname, :_index), -1, len)
+        cids = getcolumn(evt, Symbol(bname, :_collectionID), 0x00000000, len)
         StructArray{ObjectID}((inds, cids))
     end
     @inline function StructArray{Vector3f, bname}(evt::UnROOT.LazyEvent, collid, len) where {bname}
-        StructArray{Vector3f}((getproperty(evt, Symbol(bname, :_x)), getproperty(evt, Symbol(bname, :_y)), getproperty(evt, Symbol(bname, :_z))))
+        StructArray{Vector3f}((getcolumn(evt, Symbol(bname, :_x), 0.0f0, len), 
+                               getcolumn(evt, Symbol(bname, :_y), 0.0f0, len),
+                               getcolumn(evt, Symbol(bname, :_z), 0.0f0, len)))
     end
+
     @inline function StructArray{T, bname}(evt::UnROOT.LazyEvent, collid, len) where {T <: Number,bname}
-        getproperty(evt, bname)
+        getcolumn(evt, bname, zero(T), len)
     end
 
     #---Generic StructArray constructor (fall-back)------------------------------------------------
     function StructArray{T,bname}(evt::UnROOT.LazyEvent, collid = UInt32(0), len = -1) where {T,bname} 
         fnames = fieldnames(T)
+        ftypes = fieldtypes(T)
         n_rels::Int32  = 0      # number of one-to-one or one-to-many Relations 
-        if len == -1            # Need the length to fill missing columns
-            len = length(getproperty(evt, Symbol(bname, :_, fnames[2])))
+        if len == -1            # Need the length to fill missing colums
+            pindex = findfirst(t -> isprimitivetype(t), ftypes)
+            if isnothing(pindex)  # No primitive type found (go next level)
+                len = length(getproperty(evt, Symbol(bname, :_, fnames[2], :_, fieldnames(ftypes[2])[1])))
+            else
+                len = length(getproperty(evt, Symbol(bname, :_, fnames[pindex])))
+            end
         end
-        sa = Tuple( map(zip(fieldnames(T), fieldtypes(T))) do (fn,ft)
+        sa = Tuple( map(zip(fnames, ftypes)) do (fn,ft)
             if ft == ObjectID{T}
                 StructArray{ft}((collect(0:len-1),fill(collid,len)))
             elseif ft <: Relation
@@ -287,6 +324,12 @@ module RootIO
                     classname = result.captures[2]
                     if hasproperty(EDM4hep, Symbol(classname))
                         reader.btypes[key] = getproperty(EDM4hep, Symbol(classname))
+                    elseif classname == "Link"
+                        # Special case for Link
+                        res = match(r"(.*)Collection$", key)
+                        if !isnothing(res)
+                            reader.btypes[key] = getproperty(EDM4hep, Symbol(res.captures[1]))
+                        end
                     else
                         @warn("""Class $classname not found in EDM4hep.jl; skipping branch $key
                                  Please make sure you have the correct EDM model set with 'EDM4hep.set_edmodel()'""")
@@ -309,12 +352,21 @@ module RootIO
                     reader.btypes[fieldname] = Base.get(builtin_types, classname, Nothing)
                 else
                     classname = result.captures[2]
-                    reader.btypes[fieldname] = getproperty(EDM4hep, Symbol(classname))
+                    if classname == "Link"
+                        # Special case for Link
+                        res = match(r"(.*)Collection$", fieldname)
+                        if !isnothing(res)
+                            reader.btypes[fieldname] = getproperty(EDM4hep, Symbol(res.captures[1]))
+                        end
+                    else
+                        reader.btypes[fieldname] = getproperty(EDM4hep, Symbol(classname))
+                    end
                 end
             end
         else
             error("$treename is not a TTree or RNutple")
         end
+        #---return the combined LazyTree
         reader.lazytree = reduce(vcat, (LazyTree(tfile, "events", keys(reader.btypes)) for tfile in reader.files))
     end
     
@@ -333,15 +385,10 @@ module RootIO
             sa = StructArray{btype,sbranch}(evt, collid)
         end
         if register
-            assignEDStore(sa, collid)
-            if !isempty(layout[3])  # check if there are relations in this branch
-                relations = Tuple(_get(reader, evt, rb, ObjectID{rt}, false) for (rb, rt) in layout[3])
-                assignEDStore_relations(relations, btype, collid)
-            end
-            if !isempty(layout[4])  # check if there are vector members in this branch
-                vmembers = Tuple(_get(reader, evt, rb, rt, false) for (rb, rt) in layout[4])
-                assignEDStore_vmembers(vmembers, btype, collid)
-            end
+            relations = Tuple(_get(reader, evt, rb, ObjectID{rt}, false) for (rb, rt) in layout[3])
+            vmembers = Tuple(_get(reader, evt, rb, rt, false) for (rb, rt) in layout[4])
+            coll = EDCollection(sa, relations, vmembers)
+            EDStore()[collid] = coll
         end
         sa
     end
@@ -377,14 +424,14 @@ module RootIO
     end
 
     """
-    create_getter(reader::Reader, bname::String; selection=nothing, register=true)
+    create_getter(reader::Reader, bname::String; selection=nothing)
 
     This function creates a getter function for a given branch name. The getter function is a function that takes an event and
     returns a `StructArray` with the data of the branch. The getter function is created as a function with the name `get_<branchname>`.
     The optional parameter `selection` is a list of field names to be selected from the branch. If `selection` is not provided, all fields are selected.
     The user can use a list of strings, symbols or regular expressions to select the fields.
     """
-    function create_getter(reader::Reader, bname::String; selection=nothing, register=true)
+    function create_getter(reader::Reader, bname::String; selection=nothing)
         btype = reader.btypes[bname]
         collid = Base.get(reader.collectionIDs, bname, UInt32(0))
         snames = isnothing(selection) ? fieldnames(btype) : selectednames(btype, selection) 
@@ -429,39 +476,8 @@ module RootIO
                 end
             end
             code *= "    )\n"
-            code *= "    sa =  StructArray{$btype}(columns)\n"
-            if register
-                code *= "    assignEDStore(sa, UInt32($(collid)))\n"
-                code *= "    relations = (\n"
-                for (ft, fn) in zip(fieldtypes(btype), fieldnames(btype))
-                    if ft <: Relation
-                        rt = eltype(ft)
-                        if fn in snames
-                            code *= "        StructArray{ObjectID{$rt}, Symbol(\"_$(bname)_$(fn)\")}(evt),\n"
-                        else
-                            code *= "        StructArray(ObjectID{$rt}[]),\n"
-                        end
-                    end
-                end
-                code *= "    )\n"
-                code *= "    pvectors = (\n"
-                for (ft, fn) in zip(fieldtypes(btype), fieldnames(btype))
-                    fn in snames || continue
-                    if ft <: PVector
-                        rt = eltype(ft)
-                        if fn in snames
-                            code *= "        StructArray{$rt, Symbol(\"_$(bname)_$(fn)\")}(evt),\n"
-                        else
-                            code *= "        StructArray($rt[]),\n"
-                        end
-                    end
-                end
-                code *= "    )\n"
-                code *= "    assignEDStore_relations(relations, $btype, UInt32($(collid)))\n"
-                code *= "    assignEDStore_vmembers(pvectors, $btype, UInt32($(collid)))\n"
-            end
+            code *= "    return StructArray{$btype}(columns)\n"
         end
-        code *= "    return sa\n"
         code *= "end\n"
         Meta.parse(code) |> eval
     end

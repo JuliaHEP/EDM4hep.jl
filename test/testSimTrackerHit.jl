@@ -12,7 +12,7 @@
         SimTrackerHit(cellID=0xcaffeebabe, EDep=j*0.001, position=(-j * 10., -j * 20., -j * 5.), mcparticle=p2) |> register
     end
 
-    hits = getEDStore(SimTrackerHit).objects
+    hits = getEDCollection(SimTrackerHit)
     @test length(hits) == 2*nsh
 
     # iterate over simulation hits

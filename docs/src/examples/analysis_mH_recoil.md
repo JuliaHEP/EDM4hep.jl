@@ -28,13 +28,6 @@ using Plots; gr()
 theme(:boxed)
 ````
 
-````
-Precompiling packages...
-   5267.1 ms  ✓ EDM4hep → EDM4hepPlotsExt
-  1 dependency successfully precompiled in 6 seconds. 268 already precompiled.
-
-````
-
 ## Definition of some analysis functions
 These are couple of examples of high-level functions that makes use of `ReconstructedParticle`
 objects to build resonances and recoils.
@@ -148,7 +141,7 @@ end
 ````
 
 ````
- 11.443717 seconds (24.92 M allocations: 4.544 GiB, 8.94% gc time, 63.08% compilation time)
+ 17.473186 seconds (27.00 M allocations: 6.466 GiB, 7.07% gc time, 67.32% compilation time)
 
 ````
 

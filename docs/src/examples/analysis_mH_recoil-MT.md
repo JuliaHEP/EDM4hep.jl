@@ -112,15 +112,16 @@ reader
 ````
 
 ````
-┌───────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ Attribute     │ Value                                                                                            │
-├───────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────┤
-│ File Name(s)  │ /Users/mato/Development/EDM4hep.jl/docs/src/examples/../../../examples/FCC/events_000189367.root │
-│ # of events   │ 100000                                                                                           │
-│ IO Format     │ TTree                                                                                            │
-│ PODIO version │ 0.16.2                                                                                           │
-│ ROOT version  │ 6.26.6                                                                                           │
-└───────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌────────────────┬──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ Attribute      │ Value                                                                                            │
+├────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ File Name(s)   │ /Users/mato/Development/EDM4hep.jl/docs/src/examples/../../../examples/FCC/events_000189367.root │
+│ # of events    │ 100000                                                                                           │
+│ IO Format      │ TTree                                                                                            │
+│ EDM4hep schema │ 1.0.0                                                                                            │
+│ PODIO version  │ 0.16.2                                                                                           │
+│ ROOT version   │ 6.26.6                                                                                           │
+└────────────────┴──────────────────────────────────────────────────────────────────────────────────────────────────┘
 ┌──────────────────────────┬───────────────────────────────────┬──────────────┐
 │ BranchName               │ Type                              │ CollectionID │
 ├──────────────────────────┼───────────────────────────────────┼──────────────┤
@@ -236,9 +237,9 @@ println("Speeedup: $(elapsed1/elapsed2)")
 ````
 
 ````
-Serial: total time: 11.487231916, 8705.317410778041 events/s. Selected events: 5008
-MT[4]: total time: 10.610239, 9424.85838443413 events/s. Selected events: 5008
-Speeedup: 1.0826553403745194
+Serial: total time: 17.929179666, 5577.500023028661 events/s. Selected events: 5008
+MT[4]: total time: 16.070114167, 6222.731149312563 events/s. Selected events: 5008
+Speeedup: 1.115684647892396
 
 ````
 
@@ -255,9 +256,9 @@ println("Speeedup: $(elapsed1/elapsed2)")
 ````
 
 ````
-Serial: total time: 3.477103792, 28759.567151856823 events/s. Selected events: 5008
-MT[4]: total time: 3.687856292, 27116.024075267844 events/s. Selected events: 5008
-Speeedup: 0.942852301360771
+Serial: total time: 5.1706065, 19340.09095451375 events/s. Selected events: 5008
+MT[4]: total time: 4.741301334, 21091.25595601724 events/s. Selected events: 5008
+Speeedup: 1.0905458513934647
 
 ````
 
