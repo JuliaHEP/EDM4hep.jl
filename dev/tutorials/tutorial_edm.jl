@@ -53,25 +53,26 @@ for p in getEDCollection(MCParticle)
     end
 end
 
-hit = SimTrackerHit(cellID=0xabadcaffee, eDep=0.1, position=(0.0, 0.0, 0.0), particle=p7);
+hit = SimTrackerHit(cellID=0xabadcaffee, EDep=0.1, position=(0.0, 0.0, 0.0), mcparticle=p7);
+println("index=$(hit.index)")
 println("index=$(hit.index)")
 
 nhit = register(hit)
 println("index=$(nhit.index)")
 
 for h in getEDCollection(SimTrackerHit)
-    println("SimTrackerHit in cellID=$(string(h.cellID, base=16)) with eDep=$(h.eDep) and position=$(h.position) associated to particle $(h.particle.index)")
+    println("SimTrackerHit in cellID=$(string(h.cellID, base=16)) with eDep=$(h.EDep) and position=$(h.position) associated to mcparticle $(h.mcparticle.index)")
 end
 
 hitcollection = EDCollection{SimTrackerHit}()
 push!(hitcollection, hit)
 push!(hitcollection, hit)
 for h in hitcollection
-    println("SimTrackerHit in cellID=$(string(h.cellID, base=16)) with eDep=$(h.eDep) and position=$(h.position) associated to particle $(h.particle.index)")
+    println("SimTrackerHit in cellID=$(string(h.cellID, base=16)) with eDep=$(h.EDep) and position=$(h.position) associated to mcparticle $(h.mcparticle.index)")
 end
 
-t_hit1 = TrackerHit3D(cellID=0x1, eDep=0.1, position=(1., 1., 1.))
-t_hit2 = TrackerHit3D(cellID=0x1, eDep=0.2, position=(2., 2., 2.))
+t_hit1 = TrackerHit(cellID=0x1, eDep=0.1, position=(1., 1., 1.))
+t_hit2 = TrackerHit(cellID=0x1, eDep=0.2, position=(2., 2., 2.))
 track = Track()
 track = pushToTrackerHits(track, t_hit1)
 track = pushToTrackerHits(track, t_hit2)
