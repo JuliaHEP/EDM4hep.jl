@@ -431,7 +431,7 @@ module RootIO
     The optional parameter `selection` is a list of field names to be selected from the branch. If `selection` is not provided, all fields are selected.
     The user can use a list of strings, symbols or regular expressions to select the fields.
     """
-    function create_getter(reader::Reader, bname::String; selection=nothing)
+    function create_getter(reader::Reader, bname::String; selection=nothing, register=true)
         btype = reader.btypes[bname]
         collid = Base.get(reader.collectionIDs, bname, UInt32(0))
         snames = isnothing(selection) ? fieldnames(btype) : selectednames(btype, selection) 
@@ -476,8 +476,40 @@ module RootIO
                 end
             end
             code *= "    )\n"
-            code *= "    return StructArray{$btype}(columns)\n"
+            code *= "    sa =  StructArray{$btype}(columns)\n"
+            if register
+                code *= "    relations = (\n"
+                for (ft, fn) in zip(fieldtypes(btype), fieldnames(btype))
+                    if ft <: Relation
+                        rt = eltype(ft)
+                        if fn in snames
+                            code *= "        StructArray{ObjectID{$rt}, Symbol(\"_$(bname)_$(fn)\")}(evt),\n"
+                        else
+                            code *= "        StructArray(ObjectID{$rt}[]),\n"
+                        end
+                    end
+                end
+                code *= "    )\n"
+                code *= "    pvectors = (\n"
+                for (ft, fn) in zip(fieldtypes(btype), fieldnames(btype))
+                    fn in snames || continue
+                    if ft <: PVector
+                        rt = eltype(ft)
+                        if fn in snames
+                            code *= "        StructArray{$rt, Symbol(\"_$(bname)_$(fn)\")}(evt),\n"
+                        else
+                            code *= "        StructArray($rt[]),\n"
+                        end
+                    end
+                end
+                code *= "    )\n"
+                code *= "    coll = EDCollection(sa, relations, pvectors)\n"
+            else
+                code *= "    coll = EDCollection(sa, (), ())\n"
+            end
+            code *= "    EDStore()[$(collid)] = coll\n"
         end
+        code *= "    return sa\n"
         code *= "end\n"
         Meta.parse(code) |> eval
     end

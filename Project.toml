@@ -1,6 +1,6 @@
 name = "EDM4hep"
 uuid = "eb32b910-dde9-4347-8fce-cd6be3498f0c"
-version = "0.4.5"
+version = "0.4.6"
 authors = ["Pere Mato <pere.mato@cern.ch>"]
 
 [deps]

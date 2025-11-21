@@ -22,7 +22,7 @@ module EDM4hepPlotsExt
     @recipe function f(h::H2D)
         hist = h.hist
         seriestype := :bins2d
-         title := h.title * (h.usym != :nounit ? " [$(h.usym)]" : "")
+         title := h.title
         x := binedges(hist)[1]
         y := binedges(hist)[2]
         z := (surf = bincounts(hist), )

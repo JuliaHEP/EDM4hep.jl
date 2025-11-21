@@ -237,9 +237,9 @@ println("Speeedup: $(elapsed1/elapsed2)")
 ````
 
 ````
-Serial: total time: 17.929179666, 5577.500023028661 events/s. Selected events: 5008
-MT[4]: total time: 16.070114167, 6222.731149312563 events/s. Selected events: 5008
-Speeedup: 1.115684647892396
+Serial: total time: 17.868858, 5596.328539854086 events/s. Selected events: 5008
+MT[4]: total time: 15.99800975, 6250.777538124704 events/s. Selected events: 5008
+Speeedup: 1.116942562183399
 
 ````
 
@@ -256,9 +256,9 @@ println("Speeedup: $(elapsed1/elapsed2)")
 ````
 
 ````
-Serial: total time: 5.1706065, 19340.09095451375 events/s. Selected events: 5008
-MT[4]: total time: 4.741301334, 21091.25595601724 events/s. Selected events: 5008
-Speeedup: 1.0905458513934647
+Serial: total time: 5.272701625, 18965.609494354805 events/s. Selected events: 5008
+MT[4]: total time: 4.878256208, 20499.12832294601 events/s. Selected events: 5008
+Speeedup: 1.0808578721948094
 
 ````
 

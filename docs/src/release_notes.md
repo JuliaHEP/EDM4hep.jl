@@ -1,9 +1,12 @@
 
 # Release Notes
 
+## 0.4.6
+- Fixed failing examples
+
 ## 0.4.5
 - Cherrypick developments in `main` (EDCollection instead of EDStore) 
-- Fixed the tutortials in the documentation    
+- Fixed the tutorials in the documentation    
 
 ## 0.4.4
 - Added support for the EIC event data model in a compatible manner. The event data model is selected with the `edmodel` module preference.
