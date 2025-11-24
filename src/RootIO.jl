@@ -146,12 +146,12 @@ module RootIO
                  "EDM4hep schema" r.schemaversion;
                  "PODIO version" r.podioversion;
                  "ROOT version" VersionNumber(r.files[1].format_version÷10000, r.files[1].format_version%10000÷100, r.files[1].format_version%100)]
-        pretty_table(io, data1, header=["Attribute", "Value"], alignment=:l)
+        pretty_table(io, data1, column_labels=["Attribute", "Value"], alignment=:l)
         if !isempty(r.btypes)
             bs = sort([b for b in keys(r.btypes) if b[1] != '_'])
             bt = getindex.(Ref(r.btypes), bs)
             bc = EDM4hep.hex.(Base.get.(Ref(r.collectionIDs), bs, 0x00000000))
-            pretty_table(io, [bs bt bc], header=["BranchName", "Type", "CollectionID"], alignment=:l, sortkeys = true, max_num_of_rows=100)
+            pretty_table(io, [bs bt bc], column_labels=["BranchName", "Type", "CollectionID"], alignment=:l, maximum_number_of_rows=100)
         end
     end 
 
