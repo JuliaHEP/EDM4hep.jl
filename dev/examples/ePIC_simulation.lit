@@ -1,0 +1,141 @@
+
+# # Working with ePIC Simulation Output
+# This is an example using ePIC simulated data inspired by the tutorial prepared for the Hyderabad Hackathon.
+
+#md # !!! note "Note that"
+#md #     You can also download this example as a
+#md #     [Jupyter notebook](ePIC_simulation.ipynb) and a plain
+#md #     [Julia source file](ePIC_simulation.jl).
+#
+#md # #### Table of contents
+#md # ```@contents
+#md # Pages = ["ePIC_simulation.md"]
+#md # Depth = 2:3
+#md # ```
+
+# ## Installation and configuration
+# You need the following packages installed: EDM4hep, Plots, LinearAlgebra, Combinatorics.
+# 
+# This is done simply by activating and instantiating the environment where this notebook is located.
+# Please note that the package `EDM4hep` needs to be configured to use the `eic` data model. 
+# Setting the event model is needed to be done only the first time
+# 
+# ```
+#    import Pkg; Pkg.activate(@__DIR__); Pkg.instantiate()
+#    using EDM4hep
+#    EDM4hep.set_edmodel("eic")  # set the EDM model to use
+# ```
+
+# ## Loading the necessary packages
+using EDM4hep
+using EDM4hep.RootIO
+using EDM4hep.Histograms
+using EDM4hep.Analysis
+using Plots
+using LinearAlgebra
+
+# ## Open the data file
+
+fname = "pythia8NCDIS_18x275_minQ2=10_beamEffects_xAngle=-0.025_hiDiv_1.0000.eicrecon.edm4eic.root"
+
+## eic_server = "root://dtn-eic.jlab.org/"
+## fpath = "/volatile/eic/EPIC/RECO/25.08.0/epic_craterlake/DIS/NC/18x275/minQ2=10/"
+## file = eic_server * fpath * fname
+
+file  = joinpath(@__DIR__, "../../../examples/ePIC", fname)
+reader = RootIO.Reader(file)
+events = RootIO.get(reader, "events");
+
+# ## Basic Plotting Introduction
+# We will begin by taking a look at some of our reconstructed charged particles. 
+# The collection is called `ReconstructedChargedParticles` and the sub-branch `energy`. 
+# Note that in ROOT (and Python) you would access it with `ReconstructedChargedParticles.energy`, 
+# with UnROOT the separator is with `_`. 
+# 
+# Note also that the returned type for `events.ReconstructedChargedParticles_energy` is a `Vector` of `Vector`s.
+# The first vector is for the events and the second is for the particles in each event.
+# Therefore, we need to flatten them with the function `vcat`
+
+histogram(vcat(events.ReconstructedChargedParticles_energy...), bins=range(1,50,100))
+
+# We can separate the positively and negatively charged particles
+
+positive = vcat(events.ReconstructedChargedParticles_charge...) .> 0
+negative = vcat(events.ReconstructedChargedParticles_charge...) .< 0
+histogram(vcat(events.ReconstructedChargedParticles_energy...)[positive], bins=range(0,50,100))
+
+# We can plot both at the same time
+histogram(vcat(events.ReconstructedChargedParticles_energy...)[negative], label="negative", bins=range(0,50,100), xlabel="GeV")
+histogram!(vcat(events.ReconstructedChargedParticles_energy...)[positive], label="positive", bins=range(0,50,100), xlabel="GeV")
+
+# ## Basic Analysis
+# In this section, we will make some basic analysis plots checking the detection efficiency and resolution for some of our particles. 
+
+# Please note that we define getter functions only reading the sub-branches that we are going to use
+# in the analysis.
+
+get_charged = RootIO.create_getter(reader, "ReconstructedChargedParticles"; selection=[:energy, :momentum, :charge])
+get_asso    = RootIO.create_getter(reader, "ReconstructedChargedParticleAssociations")
+get_mcps    = RootIO.create_getter(reader, "MCParticles"; selection=[:PDG, :momentum, :charge, :mass, :parents, :daughters])
+
+## Basic resolution histogram
+hresolu = H1D("Energy resolution [%]", 100, -10., 10.)
+
+## Loop over events and fill histogram
+for evt in events
+    recps  = get_charged(evt)     # Get the coll. of reconstructed charged particles
+    assocs = get_asso(evt)        # Get the coll. of associations `rec <-> mcp`
+    mcps   = get_mcps(evt)        # Get the coll. of MC particles. Used to get .energy
+
+    for recp in recps             # Loop over reconstructed particles
+        ind = findfirst(x -> x.rec == recp, assocs)  # Find the association to ReconstructedParticle
+        isnothing(ind) && continue                   # If no association found, skip to next recp
+        ΔE = recp.energy - assocs[ind].sim.energy    # Calculate energy resolution
+        push!(hresolu, 100*ΔE/recp.energy)           # Fill histogram
+    end
+end
+
+# Plot the result
+
+plot(hresolu)
+
+
+# ## Event model access and navigation
+# We have seen the way to obtain the collections of objects for each event in the previous simple analysis. 
+# Once we have a collection, the `object` attributes can be accessed naturally with the (.) notation including relationships (1-to-1 or 1-N). 
+
+# ### Following relationships
+# See the following example with the decay products of a `MCParticle`.
+
+
+mcps = get_mcps(events[1])                   # Get the collection of MC particles in the first event
+for mcp in mcps[1:10]                        # Loop over the first N MC particles
+    length(mcp.daughters) == 2 || continue   # only consider particles with 2 daughters
+    println(mcp.name, "  Energy: ", mcp.energy, " Status: ", mcp.generatorStatus)
+    for d in mcp.daughters
+        println("   --->: ", d.name, "  Energy: ", d.energy)
+    end
+end
+
+# ### Getting the documentation of EDM4hep types
+# For example we can get the attributes available in a `ReconstructedParticle`
+
+#md Base.Docs.doc(ReconstructedParticle)
+#nb display("text/markdown", Base.Docs.doc(ReconstructedParticle))
+
+# ### Column access and operations 
+# Lets sum the energy of all MCParticles that have no daughters (i.e. final state particles) 
+# to verify energy conservation in the event simulation.
+
+mcps[length.(mcps.daughters) .== 0].energy |> sum
+
+# Should be equal or close to the sum of the energy of the incident electron and proton (18+275)
+# Let's see what is the distribution for all events
+
+hsumenergy = H1D("Summed energy final particles", 100, 200., 300.; unit=:GeV)
+for evt in events
+    mcps   = get_mcps(evt)        # Get the coll. of MC particles. Used to get .energy
+    sumenergy = mcps[length.(mcps.daughters) .== 0].energy |> sum
+    push!(hsumenergy, sumenergy)
+end
+plot(hsumenergy)
