@@ -4,7 +4,7 @@ using Base.Iterators: partition, take
 using FHist
 using Plots: plot, scatter, plot!, theme
 
-finput = joinpath(@__DIR__,"../../../examples" ,"ttbar_edm4hep_digi.root")
+finput = joinpath(@__DIR__,"../../examples" ,"ttbar_edm4hep_digi.root")
 
 reader = RootIO.Reader(finput)
 
