@@ -36,7 +36,7 @@ end
     end
     events = RootIO.get(reader, "events")
 
-    @test length(split(string(reader),'\n')) > 100    # check the show() method
+    @test length(split(string(reader),'\n')) > (displaysize()[1] - 10)   # check the show() method
 
     mydata1 = AnalysisData()
     @test mydata1.all == 0
