@@ -22,7 +22,7 @@ Graphs = "1"
 PrettyTables = "3"
 StaticArrays = "1.9"
 StructArrays = "0.6, 0.7"
-UnROOT = "0.10"
+UnROOT = "0.10, 0.11"
 YAML = "0.4"
 julia = "1"
 
