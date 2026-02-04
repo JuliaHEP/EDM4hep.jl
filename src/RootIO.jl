@@ -7,6 +7,7 @@ It supports both formats: TTree and RNTuple
 module RootIO
 
     using UnROOT
+    using XRootD
     using EDM4hep
     using StructArrays
     using StaticArrays
@@ -15,9 +16,11 @@ module RootIO
     export StructArray, isnewpodio
 
     const builtin_types = Dict("int" => Int32, "float" => Float32, "double" => Float64,
-    "bool" => Bool, "long" => Int64, "unsigned int" => UInt32, 
-    "int16_t" => Int16, "int32_t" => Int32,  "uint64_t" => UInt64, "uint32_t" => UInt32, 
-    "unsigned long" => UInt64, "char" => Char, "short" => Int16,
+    "bool" => Bool,
+    "long" => Int64, "unsigned long" => UInt64, "int64_t" => Int64, "uint64_t" => UInt64,
+    "int" => Int32, "unsigned int" => UInt32, "int32_t" => Int32,  "uint32_t" => UInt32,
+    "short" => Int16, "unsigned short" => UInt16, "int16_t" => Int16, "uint16_t" => UInt16,
+    "char" => Char,
     "long long" => Int64, "unsigned long long" => UInt64,
     "string" => String, 
     "vector<int>" => Vector{Int32}, 

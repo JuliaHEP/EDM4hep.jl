@@ -1,6 +1,7 @@
-include("../podio/genInterfaces.jl")
-include("../podio/genDatatypes.jl")
-include("../podio/genLinks.jl")
+using StructArrays
+include("../podio/genInterfaces_$(edmodel).jl")
+include("../podio/genDatatypes_$(edmodel).jl")
+include("../podio/genLinks_$(edmodel).jl")
 
 #--------------------------------------------------------------------------------------------------
 #----Utility functions for MCParticle--------------------------------------------------------------
@@ -37,9 +38,16 @@ function Base.getproperty(obj::MCParticle, sym::Symbol)
     end
 end
 
+function Base.getproperty(obj::StructArray{MCParticle}, sym::Symbol)
+    sym === :energy && return getproperty.(obj, :energy)
+    sym === :name && return getproperty.(obj, :name)
+    StructArrays.component(obj, sym)
+end
+
 #--------------------------------------------------------------------------------------------------
 #----Utility functions for ReconstructedParticle---------------------------------------------------
 #--------------------------------------------------------------------------------------------------
-export pₜ
+export pₜ, theta
 pₜ( o::ReconstructedParticle) = √(o.momentum.x^2 + o.momentum.y^2)
-
+θ(p::ReconstructedParticle) = atan(√(p.momentum.x^2+p.momentum.y^2), p.momentum.z)
+ϕ(p::ReconstructedParticle) = atan(p.momentum.y, p.momentum.x)

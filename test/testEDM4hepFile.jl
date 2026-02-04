@@ -11,7 +11,8 @@ end
 reset!(c::Counter) = c.count = 41
 
 @testset "ReadEDM4hep$(T)file" for T in (:TTree, :RNTuple)
-    f = joinpath(@__DIR__, "EDM4hep_example_$T-1.root")
+    sfx = T == :TTree ? "" : "_rntuple"
+    f = joinpath(@__DIR__, "edm4hep_example$(sfx).root")
     reader = RootIO.Reader(f)
     events = RootIO.get(reader, "events")
 
@@ -58,9 +59,7 @@ reset!(c::Counter) = c.count = 41
             @test p.momentumAtEndpoint.x == ++(count)
             @test p.momentumAtEndpoint.y == ++(count)
             @test p.momentumAtEndpoint.z == ++(count)
-            @test p.spin.x == ++(count)
-            @test p.spin.y == ++(count)
-            @test p.spin.z == ++(count)   
+            @test p.helicity == ++(count)
         end 
         @test mcp[1].daughters[1] == mcp[2]
         @test mcp[1].parents[1] == mcp[3]
@@ -156,7 +155,7 @@ reset!(c::Counter) = c.count = 41
             @test c.position.z == ++(count)
             @test c.positionError == cov3f
             @test c.iTheta == ++(count)
-            @test c.phi == ++(count)
+            @test c.iPhi == ++(count)
             @test c.directionError.x == ++(count)
             @test c.directionError.y == ++(count)
             @test c.directionError.z == ++(count)
@@ -309,27 +308,16 @@ reset!(c::Counter) = c.count = 41
         gep = RootIO.get(reader, evt, "GeneratorEventParametersCollection")
         reset!(count)
         for p in gep
-            @test p.eventScale == ++(count)
-            @test p.alphaQED == ++(count)
-            @test p.alphaQCD == ++(count)
-            @test p.signalProcessId == ++(count)
             @test p.sqrts == ++(count)
+            @test p.beamsPz == [ ++(count), ++(count) ]
+            @test p.partonIds == [ ++(count), ++(count) ]
+            @test p.beamPolarizations == [ ++(count), ++(count) ]
             for i in 1:vectorsize
                 @test p.crossSections[i] == ++(count)
                 @test p.crossSectionErrors[i] == ++(count)
+                @test p.weights[i] == ++(count)
             end
-            @test p.signalVertex[1] == mcp[1]
-        end
-        
-        #---GeneratorPdfInfoCollection-------------------------------------------------------------
-        gpi = RootIO.get(reader, evt, "GeneratorPdfInfoCollection")
-        reset!(count)
-        for p in gpi
-            @test p.partonId == [++(count), ++(count)]
-            @test p.lhapdfId == [++(count), ++(count)]
-            @test p.x == [++(count), ++(count)]
-            @test p.xf == [++(count), ++(count)]
-            @test p.scale == ++(count)
+            @test p.signalVertexParticles[1] == mcp[1]
         end
 
     end

@@ -1,7 +1,7 @@
 
 # Release Notes
 
-## 1.0.0 (WIP)
+## 1.0.0
 - New EDM4hep schema version 1 not backward compatible
   - Relation between `ReconstructedParticle` to ``ParticleID` inverted
   - Names and comments of attributes have been revised
@@ -14,6 +14,9 @@
 - Added more tests, in particular reading files exercising all defined types and their relations.
 - Added two new tutorials as part of the generated documentation. One to exercise the EDM4hep model (EDM), and one for reading ROOT data file (I/O).
 - Adapted to use new `events___CollectionTypeInfo` in `podio_metadata`
+- Use the version 1.0 of EDM4hep yaml file
+- Prepared for supporting other edm models (e.g. eic). Using Preferences to select the edmodel
+- Update latest version of UnROOT
 
 ## 0.4.2
 - Moved to JuliaHEP organization

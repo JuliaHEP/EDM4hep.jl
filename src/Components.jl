@@ -3,17 +3,21 @@ using Corpuscles    #  PDG database
 using StaticArrays  #  Needed for fix length arrays in datatypes
 
 export register, relations, vmembers, Relation, PVector, ObjectID, collectionID, θ, ϕ
-export @set
+export @set, @reset
 
-abstract type POD end # Abstract type to denote a POD from PODIO
+#---POD type definition-----------------------------------------------------------------------------
+abstract type edm4hep!POD end # Abstract type to denote a POD from PODIO
+const POD = edm4hep!POD
+Base.zero(::Type{T}) where T<:POD = T()
 
-include("../podio/genComponents.jl")
+include("../podio/genComponents_$(edmodel).jl")
 
 #---Vector3d
 Base.convert(::SVector{3,Float64}, v::Vector3d) = SVector{3,Float64}(v...)
 Base.show(io::IO, v::Vector3d) = print(io, "($(v.x), $(v.y), $(v.z))")
 Base.:+(v1::Vector3d, v2::Vector3d) = Vector3d(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z)
 Base.:-(v1::Vector3d, v2::Vector3d) = Vector3d(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z)
+Base.:-(v1::Vector3d) = Vector3d(-v1.x, -v1.y, -v1.z)
 Base.:*(v::Vector3d, a::Number) = Vector3d(a*v.x, a*v.y, a*v.z)
 Base.:*(a::Number, v::Vector3d) = v * a
 function Base.isapprox(v1::Vector3d, v2::Vector3d; atol::Real=0, rtol::Real=Base.rtoldefault(Float64,Float64,atol), nans::Bool=false)
@@ -31,6 +35,7 @@ Base.zero(::Type{Vector3d}) = Vector3d()
 Base.show(io::IO, v::Vector3f) = print(io, "($(v.x), $(v.y), $(v.z))")
 Base.:+(v1::Vector3f, v2::Vector3f) = Vector3f(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z)
 Base.:-(v1::Vector3f, v2::Vector3f) = Vector3f(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z)
+Base.:-(v1::Vector3f) = Vector3f(-v1.x, -v1.y, -v1.z)
 Base.:*(v::Vector3f, a::Number) = Vector3f(a*v.x, a*v.y, a*v.z)
 Base.:*(a::Number, v::Vector3f) = v * a
 function Base.isapprox(v1::Vector3f, v2::Vector3f; atol::Real=0, rtol::Real=Base.rtoldefault(Float32,Float32,atol), nans::Bool=false)
@@ -48,6 +53,7 @@ Base.zero(::Type{Vector3f}) = Vector3f()
 Base.show(io::IO, v::Vector4f) = print(io, "($(v.x), $(v.y), $(v.z), $(v.t))")
 Base.:+(v1::Vector4f, v2::Vector4f) = Vector4f(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z, v1.t + v2.t)
 Base.:-(v1::Vector4f, v2::Vector4f) = Vector4f(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z, v1.t - v2.t)
+Base.:-(v1::Vector4f) = Vector4f(-v1.x, -v1.y, -v1.z), -v1.t
 Base.:*(v::Vector4f, a::Number) = Vector4f(a*v.x, a*v.y, a*v.z, a*v.t)
 Base.:*(a::Number, v::Vector4f) = v * a
 function Base.isapprox(v1::Vector4f, v2::Vector4f; atol::Real=0, rtol::Real=Base.rtoldefault(Float32,Float32,atol), nans::Bool=false)
@@ -105,10 +111,12 @@ Base.iterate(cov::CovMatrix4f, i=1) = i > 10 ? nothing : (cov[i], i+1)
 #--------------------------------------------------------------------------------------------------
 #---ObjectID{ED}-----------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------
-struct ObjectID{ED <: POD} <: POD
+struct edm4hep!ObjectID{ED <: POD} <: POD
     index::Int32
     collectionID::UInt32    # in some cases (reading from files) the collection ID is -2
 end
+const ObjectID = edm4hep!ObjectID
+
 ObjectID(idx, collid) = ObjectID{POD}(idx,collid)
 Base.zero(::Type{ObjectID{ED}}) where ED = ObjectID{ED}(-1,0)
 Base.iszero(x::ObjectID{ED}) where ED = x.index < 0
@@ -244,6 +252,7 @@ Base.getindex(v::PVector{ED,T, N}, i) where {ED,T, N} = 0 < i <= (v.last - v.fir
 Base.size(v::PVector{ED,T,N}) where {ED,T,N} = (v.last-v.first,)
 Base.length(v::PVector{ED,T,N}) where {ED,T,N} = v.last-v.first
 Base.eltype(::Type{PVector{ED,T,N}}) where {ED,T,N} = T
+Base.zero(::Type{PVector{ED,T,N}}) where {ED,T,N} = PVector{ED,T,N}(0,0,0)
 function Base.convert(::Type{PVector{ED,T,N}}, v::AbstractVector{T}) where {ED,T,N}
     pvectors = EDCollection_pvectors(ED,N)
     tail = lastindex(pvectors)
