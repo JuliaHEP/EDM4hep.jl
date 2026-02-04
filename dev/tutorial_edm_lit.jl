@@ -114,8 +114,7 @@ end
 # ### One-to-one relations
 # The type `SimTrackerHit` has a one-to-one relation with the type `MCParticle`. Lets create a hit and associate it to a 
 # particle in the tree. We use the keyword argument `particle` to associate the hit to the particle, like this: 
-hit = SimTrackerHit(cellID=0xabadcaffee, EDep=0.1, position=(0.0, 0.0, 0.0), mcparticle=p7);
-println("index=$(hit.index)")
+hit = SimTrackerHit(cellID=0xabadcaffee, eDep=0.1, position=(0.0, 0.0, 0.0), particle=p7);
 #md # !!! note "Note that"
 #md #     The just created hit is not yet registered to any collection. This is seen by the value of the `index` attribute.
 println("index=$(hit.index)")
@@ -124,14 +123,14 @@ nhit = register(hit)
 println("index=$(nhit.index)")
 # Now the hit is registered and can be accessed by the `getEDCollection` function
 for h in getEDCollection(SimTrackerHit)
-    println("SimTrackerHit in cellID=$(string(h.cellID, base=16)) with eDep=$(h.EDep) and position=$(h.position) associated to mcparticle $(h.mcparticle.index)")
+    println("SimTrackerHit in cellID=$(string(h.cellID, base=16)) with eDep=$(h.eDep) and position=$(h.position) associated to particle $(h.particle.index)")
 end
 # Alternatively, instead of using the `register` function, we can also use the function `push!` to a specific `EDCollection`.
 hitcollection = EDCollection{SimTrackerHit}()
 push!(hitcollection, hit)
 push!(hitcollection, hit)
 for h in hitcollection
-    println("SimTrackerHit in cellID=$(string(h.cellID, base=16)) with eDep=$(h.EDep) and position=$(h.position) associated to mcparticle $(h.mcparticle.index)")
+    println("SimTrackerHit in cellID=$(string(h.cellID, base=16)) with eDep=$(h.eDep) and position=$(h.position) associated to particle $(h.particle.index)")
 end
 
 # ### One-to-many relations
@@ -139,8 +138,8 @@ end
 # created the `Track`. The `Track` type has a `trackerHits` property that behaves as a vector of `TrackerHit` objects.
 # Functions `pushToTrackerHits` and `popFromTrackerHits` are provided
 # to create the relation between the `Track` and the `TrackerHit`.
-t_hit1 = TrackerHit(cellID=0x1, eDep=0.1, position=(1., 1., 1.))
-t_hit2 = TrackerHit(cellID=0x1, eDep=0.2, position=(2., 2., 2.))
+t_hit1 = TrackerHit3D(cellID=0x1, eDep=0.1, position=(1., 1., 1.))
+t_hit2 = TrackerHit3D(cellID=0x1, eDep=0.2, position=(2., 2., 2.))
 track = Track()
 track = pushToTrackerHits(track, t_hit1)
 track = pushToTrackerHits(track, t_hit2)
