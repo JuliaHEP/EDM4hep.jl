@@ -310,7 +310,7 @@ module RootIO
         reader.treename = treename
         #---build a dictionary of branches and associated type
         tree = reader.files[1][treename]
-        pattern = r"(edm4hep|podio)::([a-zA-Z0-9]+?)(Data$|$)"
+        pattern = r"(edm4hep|edm4eic|podio)::([a-zA-Z0-9]+?)(Data$|$)"
         vpattern = r"(std::)?vector<(std::)?(.*)>"
         if tree isa UnROOT.TTree
             for (i,key) in enumerate(keys(tree))
@@ -320,7 +320,7 @@ module RootIO
                 classname = result.captures[3] |> strip
                 result = match(pattern, classname)
                 if isnothing(result) # Primitive type
-                    reader.btypes[key] = builtin_types[classname]
+                    haskey(builtin_types, classname) && (reader.btypes[key] = builtin_types[classname])
                 else
                     classname = result.captures[2]
                     if hasproperty(EDM4hep, Symbol(classname))
@@ -332,7 +332,8 @@ module RootIO
                             reader.btypes[key] = getproperty(EDM4hep, Symbol(res.captures[1]))
                         end
                     else
-                        @warn "Type $classname not found in EDM4hep module"
+                        @warn """Type $classname not found in EDM4hep module; skipping branch $key.
+                                 Make sure the correct data model is selected with 'EDM4hep.set_edmodel()'"""
                     end
                 end
             end
@@ -356,8 +357,11 @@ module RootIO
                         if !isnothing(res)
                             reader.btypes[fieldname] = getproperty(EDM4hep, Symbol(res.captures[1]))
                         end
-                    else
+                    elseif hasproperty(EDM4hep, Symbol(classname))
                         reader.btypes[fieldname] = getproperty(EDM4hep, Symbol(classname))
+                    else
+                        @warn """Type $classname not found in EDM4hep module; skipping field $fieldname.
+                                 Make sure the correct data model is selected with 'EDM4hep.set_edmodel()'"""
                     end
                 end
             end

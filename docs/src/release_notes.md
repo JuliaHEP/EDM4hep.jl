@@ -1,6 +1,13 @@
 
 # Release Notes
 
+## Unreleased
+- Added support for the EDM4eic data model (schema version 830), ported from the `v0-patches` branch
+  - Select it with `EDM4hep.set_edmodel("eic")` (or the `EDModel=eic` environment variable) before loading the package
+  - Generated `podio/gen*_eic.jl` files from `podio/edm4eic.yaml` merged with the EDM4hep 1.0 schema
+  - The ROOT reader recognises `edm4eic::` classes and skips branches whose type is not in the selected model
+  - Added an ePIC example and the `EICModelReader` test; CI runs the tests for both models
+
 ## 1.0.0
 - New EDM4hep schema version 1 not backward compatible
   - Relation between `ReconstructedParticle` to ``ParticleID` inverted

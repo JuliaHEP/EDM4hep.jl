@@ -127,7 +127,7 @@ function gen_datatype(io, key, dtype)
     println(io, "    #---Data Members")
     members = []
     defvalues = []
-    for m in dtype["Members"]
+    for m in Base.get(dtype, "Members", [])
         t, v, c, d = split_member(m)
         println(io, "    $(gen_member(v,t)) $(c)")
         push!(members,v)
@@ -239,7 +239,7 @@ function gen_docstring(io, key, dtype)
     println(io, "$desc")
     !isempty(author) && println(io, "- Author: $author")
     println(io, "# Fields")
-    for m in dtype["Members"] 
+    for m in Base.get(dtype, "Members", []) 
         t, v, c = split_member(m)
         println(io, "- `$v::$t`: $(c[3:end])")
     end
@@ -322,11 +322,11 @@ function gen_model(sections=[])
     #---Merge-----------------------------------------------------------------------------------------
     data = Dict()
     data["schema_version"] = yamls[end]["schema_version"]                  # take the schema version of the last one
-    data["components"] = merge(getindex.(yamls,"components")...)
-    data["datatypes"]  = merge(getindex.(yamls,"datatypes")...)
-    data["options"]    = merge(getindex.(yamls,"options")...)
-    data["interfaces"] = merge(getindex.(yamls,"interfaces")...)
-    data["links"]      = merge(getindex.(yamls,"links")...)
+    data["components"] = merge([get(y,"components",Dict()) for y in yamls]...)
+    data["datatypes"]  = merge([get(y,"datatypes",Dict()) for y in yamls]...)
+    data["options"]    = merge([get(y,"options",Dict()) for y in yamls]...)
+    data["interfaces"] = merge([get(y,"interfaces",Dict()) for y in yamls]...)
+    data["links"]      = merge([get(y,"links",Dict()) for y in yamls]...)
 
     #---Components-------------------------------------------------------------------------------------
     io = open(joinpath(@__DIR__, "genComponents_$(ident).jl"), "w")
