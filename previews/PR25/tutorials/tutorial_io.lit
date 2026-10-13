@@ -34,7 +34,7 @@ using Plots: plot, scatter, plot!, theme
 # We will read an EDM4hep file with the `RootIO.Reader` function. This function returns a reader object that can be used to access 
 # the events in the file. The input file is a ROOT file with the EDM4hep data model and is located to the path `ttbar_edm4hep_digi.root`.
 
-finput = joinpath(@__DIR__,"../../examples" ,"ttbar_edm4hep_digi.root")
+finput = joinpath(@__DIR__,"../../../examples" ,"ttbar_edm4hep_digi.root")
 
 # We create a reader object to access the events in the file. The object displays a summary table of the content of the file.
 reader = RootIO.Reader(finput)
