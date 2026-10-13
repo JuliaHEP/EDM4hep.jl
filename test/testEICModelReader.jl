@@ -23,5 +23,14 @@ using EDM4hep.RootIO
         @test eltype(asso)  == MCRecoParticleAssociation
         @test eltype(mcps)  == MCParticle
     end
+
+    #---Relations of collections obtained with a getter can be navigated
+    evt   = events[1]
+    mcps  = get_mcps(evt)
+    full  = RootIO.get(reader, evt, "MCParticles")
+    @test sum(length.(mcps.daughters)) > 0
+    for i in 1:10
+        @test [d.index for d in mcps[i].daughters] == [d.index for d in full[i].daughters]
+    end
 end
  

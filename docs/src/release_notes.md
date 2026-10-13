@@ -7,6 +7,10 @@
   - Generated `podio/gen*_eic.jl` files from `podio/edm4eic.yaml` merged with the EDM4hep 1.0 schema
   - The ROOT reader recognises `edm4eic::` classes and skips branches whose type is not in the selected model
   - Added an ePIC example and the `EICModelReader` test; CI runs the tests for both models
+- Documentation restructured as in `v0-patches`: tutorials under `docs/src/tutorials`, examples (FCC and ePIC) under `docs/src/examples`, generated with Literate by `docs/literate.jl`. The FCC example pages are the ones rendered with version 0.4, since their input sample uses an EDM4hep schema older than 1.0
+- Added the `EDM4hepPlotsExt` package extension with Plots recipes for `H1D` and `H2D` histograms
+- `RootIO.create_getter` registers the collection in the `EDStore` (keyword `register=true`) so that relations can be navigated, and handles one-to-one relations in files written with newer podio versions
+- Fixed `H1D`, `H2D` and `H3D` constructors for the current FHist version
 
 ## 1.0.0
 - New EDM4hep schema version 1 not backward compatible

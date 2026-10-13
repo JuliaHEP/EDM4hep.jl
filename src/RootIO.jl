@@ -433,7 +433,7 @@ module RootIO
     The optional parameter `selection` is a list of field names to be selected from the branch. If `selection` is not provided, all fields are selected.
     The user can use a list of strings, symbols or regular expressions to select the fields.
     """
-    function create_getter(reader::Reader, bname::String; selection=nothing)
+    function create_getter(reader::Reader, bname::String; selection=nothing, register=true)
         btype = reader.btypes[bname]
         collid = Base.get(reader.collectionIDs, bname, UInt32(0))
         snames = isnothing(selection) ? fieldnames(btype) : selectednames(btype, selection) 
@@ -463,7 +463,12 @@ module RootIO
                             N = size(ft)[1]
                             code *= "        StructArray{$ft}(reshape(getproperty(evt, Symbol(\"$(bname)_$fn[$N]\")), $N, len);dims=1),\n"
                         elseif ft <: ObjectID  # one-to-one relation
-                            code *= "        StructArray{$ft, Symbol(\"$(bname)#$(n_rels-1)\")}(evt, $(collid), len),\n"
+                            if isnewpodio()
+                                na = replace("$(fn)", "_idx" => "", "mcparticle" => "MCParticle")     # remove the added suffix
+                                code *= "        StructArray{$ft, Symbol(\"_$(bname)_$(na)\")}(evt, $(collid), len),\n"
+                            else
+                                code *= "        StructArray{$ft, Symbol(\"$(bname)#$(n_rels-1)\")}(evt, $(collid), len),\n"
+                            end
                         else
                             code *= "        StructArray{$ft, Symbol(\"$(bname)_$fn\")}(evt, $(collid), len),\n"
                         end
@@ -473,7 +478,32 @@ module RootIO
                 end
             end
             code *= "    )\n"
-            code *= "    return StructArray{$btype}(columns)\n"
+            code *= "    sa = StructArray{$btype}(columns)\n"
+            if register   # register the collection in the EDStore to be able to navigate the relations
+                _, _, relations, vmembers = buildlayout(reader, bname, btype)
+                rnames = [fn for (fn, ft) in zip(fieldnames(btype), fieldtypes(btype)) if ft <: Relation]
+                vnames = [fn for (fn, ft) in zip(fieldnames(btype), fieldtypes(btype)) if ft <: PVector]
+                code *= "    relations = (\n"
+                for ((rb, rt), fn) in zip(relations, rnames)
+                    if fn in snames
+                        code *= "        StructArray{ObjectID{$rt}, Symbol(\"$rb\")}(evt),\n"
+                    else
+                        code *= "        StructArray(ObjectID{$rt}[]),\n"
+                    end
+                end
+                code *= "    )\n"
+                code *= "    vmembers = (\n"
+                for ((vb, vt), fn) in zip(vmembers, vnames)
+                    if fn in snames
+                        code *= "        StructArray{$vt, Symbol(\"$vb\")}(evt),\n"
+                    else
+                        code *= "        StructArray($vt[]),\n"
+                    end
+                end
+                code *= "    )\n"
+                code *= "    EDStore()[$(collid)] = EDCollection(sa, relations, vmembers)\n"
+            end
+            code *= "    return sa\n"
         end
         code *= "end\n"
         Meta.parse(code) |> eval
