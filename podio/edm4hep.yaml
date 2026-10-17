@@ -1,5 +1,5 @@
 ---
-schema_version: 6
+schema_version: 7
 options:
   getSyntax: True
   exposePODMembers: False
@@ -178,7 +178,7 @@ components:
     edm4hep::TrackState:
       Description: "Parametrized description of a particle track"
       Members:
-        - int32_t location // for use with At{Other|IP|FirstHit|LastHit|Calorimeter|Vertex}|LastLocation
+        - int32_t location // location of this track state, see edm4hep::TrackState::Location for the predefined values
         - float D0 // transverse impact parameter
         - float phi [rad] // azimuthal angle of the track at this location (i.e. not phi0)
         - float omega [1/mm] // is the signed curvature of the track
@@ -190,13 +190,26 @@ components:
       ExtraCode:
         includes: "#include <edm4hep/Constants.h>"
         declaration: |
-          static const int AtOther = 0 ; // any location other than the ones defined below
-          static const int AtIP = 1 ;
-          static const int AtFirstHit = 2 ;
-          static const int AtLastHit = 3 ;
-          static const int AtCalorimeter = 4 ;
-          static const int AtVertex = 5 ;
-          static const int LastLocation = AtVertex  ;
+          /// The predefined locations at which a TrackState can be defined
+          ///
+          /// NOTE: This is deliberately an *unscoped* enum with a fixed underlying type:
+          /// - The implicit conversion to std::int32_t keeps all existing uses of
+          ///   edm4hep::TrackState::AtIP (and friends) valid, e.g. assigning to the
+          ///   location member or aggregate initialization of a TrackState.
+          /// - cppyy picks up the enumerators of an unscoped enum directly, so
+          ///   edm4hep.TrackState.AtIP keeps working from python.
+          ///
+          /// It is nevertheless a distinct type, which is useful in certain cases to avoid
+          /// confusion with plain ints.
+          enum Location : std::int32_t {
+            AtOther = 0,             ///< any location other than the ones defined below
+            AtIP = 1,                ///< at the interaction point
+            AtFirstHit = 2,          ///< at the first hit of the track
+            AtLastHit = 3,           ///< at the last hit of the track
+            AtCalorimeter = 4,       ///< at the entry point into the calorimeter
+            AtVertex = 5,            ///< at the vertex
+            LastLocation = AtVertex, ///< the last of the predefined locations
+          };
 
           /// Get the covariance matrix value for the two passed parameters
           constexpr float getCovMatrix(edm4hep::TrackParams parI, edm4hep::TrackParams parJ) const { return covMatrix.getValue(parI, parJ); }
@@ -254,7 +267,7 @@ datatypes:
         void setHasLeftDetector(bool bitval) { setSimulatorStatus( utils::setBit( getSimulatorStatus() , BITLeftDetector , bitval ) ) ;   }
         void setStopped(bool bitval) { setSimulatorStatus( utils::setBit( getSimulatorStatus() , BITStopped , bitval ) ) ;   }
         void setOverlay(bool bitval) { setSimulatorStatus( utils::setBit( getSimulatorStatus() , BITOverlay , bitval ) ) ;   }
-
+        void setHandledByFastSim(bool bitval) { setSimulatorStatus( utils::setBit( getSimulatorStatus() , BITHandledByFastSim , bitval ) ) ;   }
 
     ExtraCode:
       includes: |
@@ -263,14 +276,15 @@ datatypes:
 
       declaration: |
         // define the bit positions for the simulation flag
-        static const int BITCreatedInSimulation = 30;
-        static const int BITBackscatter = 29 ;
-        static const int BITVertexIsNotEndpointOfParent = 28 ;
-        static const int BITDecayedInTracker = 27 ;
-        static const int BITDecayedInCalorimeter = 26 ;
-        static const int BITLeftDetector = 25 ;
-        static const int BITStopped = 24 ;
-        static const int BITOverlay = 23 ;
+        static constexpr int BITCreatedInSimulation = 30;
+        static constexpr int BITBackscatter = 29 ;
+        static constexpr int BITVertexIsNotEndpointOfParent = 28 ;
+        static constexpr int BITDecayedInTracker = 27 ;
+        static constexpr int BITDecayedInCalorimeter = 26 ;
+        static constexpr int BITLeftDetector = 25 ;
+        static constexpr int BITStopped = 24 ;
+        static constexpr int BITOverlay = 23 ;
+        static constexpr int BITHandledByFastSim = 22;
         /// return energy computed from momentum and mass
         double getEnergy() const { return std::sqrt( getMomentum()[0]*getMomentum()[0]+getMomentum()[1]*getMomentum()[1]+
                                           getMomentum()[2]*getMomentum()[2] + getMass()*getMass()  )  ;}
@@ -293,6 +307,8 @@ datatypes:
         bool isOverlay() const { return utils::checkBit(getSimulatorStatus(), BITOverlay); }
         /// Check if this particle has a set helicity
         bool hasHelicity() const noexcept { return getHelicity() != 9; }
+        /// Check if this particle has been handled by fast simulation
+        bool isHandledByFastSim() const { return utils::checkBit(getSimulatorStatus(), BITHandledByFastSim); }
 
   edm4hep::SimTrackerHit:
     Description: "Simulated tracker hit"
@@ -310,18 +326,18 @@ datatypes:
     MutableExtraCode:
       includes: |
         #include <cmath>
+        #include <edm4hep/utils/bit_utils.h>
         #include <edm4hep/MCParticle.h>
 
       declaration: |
-        int32_t  set_bit(int32_t val, int num, bool bitval){ return (val & ~(1<<num)) | (bitval << num); }
-        void setOverlay(bool val) { setQuality( set_bit( getQuality() , BITOverlay , val ) ) ;   }
-        void setProducedBySecondary(bool val) { setQuality( set_bit( getQuality() , BITProducedBySecondary , val ) ) ;   }
+        void setOverlay(bool val) { setQuality( utils::setBit( getQuality() , BITOverlay , val ) ) ;   }
+        void setProducedBySecondary(bool val) { setQuality( utils::setBit( getQuality() , BITProducedBySecondary , val ) ) ;   }
 
     ExtraCode:
       includes: "#include <edm4hep/MCParticle.h>"
       declaration: |
-        static const int  BITOverlay = 31;
-        static const int  BITProducedBySecondary = 30;
+        static constexpr int  BITOverlay = 31;
+        static constexpr int  BITProducedBySecondary = 30;
         bool isOverlay() const { return getQuality() & (1 << BITOverlay) ; }
         bool isProducedBySecondary() const { return getQuality() & (1 << BITProducedBySecondary) ; }
         double x() const {return getPosition()[0];}
@@ -399,7 +415,7 @@ datatypes:
       - edm4hep::CovMatrix3f positionError [mm^2]  // covariance matrix of the position
       - float                iTheta [rad]    // Polar angle of the cluster's intrinsic direction (used e.g. for vertexing). Not to be confused with the cluster position seen from IP
       - float                iPhi [rad]       // Azimuthal angle of the cluster's intrinsic direction (used e.g. for vertexing). Not to be confused with the cluster position seen from IP
-      - edm4hep::Vector3f    directionError [mm^2]  // covariance matrix of the direction
+      - edm4hep::Vector3f    directionError [rad^2] // covariance matrix of the direction
     VectorMembers:
       - float   shapeParameters      // shape parameters. The corresponding names of the shape parameters should be stored in the collection named by edm4hep::labels::ShapeParameterNames in the file-level metadata, as a vector of strings in the same order as the parameters.
       - float   subdetectorEnergies  // energy observed in a particular subdetector
@@ -411,18 +427,12 @@ datatypes:
       declaration: |
         /// Get the position error value for the two passed dimensions
         float getPositionError(edm4hep::Cartesian dimI, edm4hep::Cartesian dimJ) const { return getPositionError().getValue(dimI, dimJ); }
-        /// Get the Azimuthal angle of the cluster's intrinsic direction (used e.g. for vertexing). Not to be confused with the cluster position seen from IP
-        [[deprecated("Use getIPhi instead")]]
-        float getPhi() const { return getIPhi(); }
 
     MutableExtraCode:
       includes: "#include <edm4hep/Constants.h>"
       declaration: |
         /// Set the position error value for the two passed dimensions
         void setPositionError(float value, edm4hep::Cartesian dimI, edm4hep::Cartesian dimJ) { return getPositionError().setValue(value, dimI, dimJ); }
-        /// Set the Azimuthal angle of the cluster's intrinsic direction (used e.g. for vertexing). Not to be confused with the cluster position seen from IP
-        [[deprecated("Use setIPhi instead")]]
-        void setPhi(float value) { setIPhi(value); }
 
 
   edm4hep::TrackerHit3D:
@@ -433,6 +443,7 @@ datatypes:
       - int32_t type                       // type of raw data hit
       - int32_t quality                    // quality bit flag of the hit
       - float time [ns]                    // time of the hit
+      - float timeError [ns]               // error measured on time
       - float eDep [GeV]                   // energy deposited on the hit
       - float eDepError [GeV]              // error measured on eDep
       - edm4hep::Vector3d position [mm]    // hit position
@@ -458,6 +469,7 @@ datatypes:
       - int32_t type                       // type of raw data hit
       - int32_t quality                    // quality bit flag of the hit
       - float time [ns]                    // time of the hit
+      - float timeError [ns]               // error measured on time
       - float eDep [GeV]                   // energy deposited on the hit
       - float eDepError [GeV]              // error measured on eDep
       - edm4hep::Vector2f u [rad]          // direction of the first measurement given as (theta, phi) in spherical coordinates
@@ -499,6 +511,7 @@ datatypes:
       - int32_t type // type of the raw data hit
       - int32_t quality // quality bit flag of the hit
       - float time [ns] // time of the hit
+      - float timeError [ns] // error measured on time
       - float eDep [GeV] // energy deposited by the hit
       - float eDepError [GeV] // error on eDep
       - float wireStereoAngle // angle between the sense wire axis and the drift chamber axis (usually the z-axis) - use it together with wireAzimuthalAngle to get the wire direction
@@ -530,7 +543,35 @@ datatypes:
     OneToManyRelations:
       - edm4hep::TrackerHit trackerHits  // hits that have been used to create this track
       - edm4hep::Track tracks            // tracks (segments) that have been combined to create this track
+    ExtraCode:
+      includes: |
+        #include <optional>
+        #include <algorithm>
+        #include <ranges>
+        #include <cstdint>
+      declaration: |
+        /// Get the TrackState at a dedicated location
+        ///
+        /// @note This will return the first TrackState for which the location matches
+        /// even if there are multiple in the track
+        std::optional<edm4hep::TrackState> getTrackState(edm4hep::TrackState::Location location) const {
+          const auto trackStates = getTrackStates();
+          const auto it = std::ranges::find(trackStates, location, &edm4hep::TrackState::location);
+          return it != trackStates.end() ? std::optional{*it} : std::nullopt;
+        }
 
+        /// Get the TrackState at a dedicated location
+        #ifndef __CLING__
+        [[deprecated("Use getTrackState(edm4hep::TrackState::Location) instead")]]
+        std::optional<edm4hep::TrackState> getTrackState(std::int32_t location) const {
+          return getTrackState(static_cast<edm4hep::TrackState::Location>(location));
+        }
+        #endif
+
+        /// Deliberately deleted: getTrackStates(index) takes an *index* into the vector
+        /// of track states, not a location. Use getTrackState(location) to look up a
+        /// TrackState by its location.
+        edm4hep::TrackState getTrackStates(edm4hep::TrackState::Location) const = delete;
 
   edm4hep::Vertex:
     Description: "Vertex"
@@ -658,6 +699,7 @@ interfaces:
       - int32_t type // type of the raw data hit
       - int32_t quality // quality bit flag of the hit
       - float time [ns] // time of the hit
+      - float timeError [ns] // error measured on time
       - float eDep [GeV] // energy deposited on the hit
       - float eDepError [GeV] // error measured on eDep
       - edm4hep::Vector3d position [mm] // hit position as recorded by the sensor. The exact interpretation will depend on the currently held type of the interface

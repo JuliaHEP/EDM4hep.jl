@@ -1,7 +1,7 @@
 
 # Release Notes
 
-## Unreleased
+## 1.1.0
 - Added support for the EDM4eic data model (schema version 830), ported from the `v0-patches` branch
   - Select it with `EDM4hep.set_edmodel("eic")` (or the `EDModel=eic` environment variable) before loading the package
   - Generated `podio/gen*_eic.jl` files from `podio/edm4eic.yaml` merged with the EDM4hep 1.0 schema
@@ -11,6 +11,9 @@
 - Added the `EDM4hepPlotsExt` package extension with Plots recipes for `H1D` and `H2D` histograms
 - `RootIO.create_getter` registers the collection in the `EDStore` (keyword `register=true`) so that relations can be navigated, and handles one-to-one relations in files written with newer podio versions
 - Fixed `H1D`, `H2D` and `H3D` constructors for the current FHist version
+- Updated YAML files for PODIO:
+  - emd4hep.yaml version v01.02
+  - edm4eic.yaml version v8.10.0
 
 ## 1.0.0
 - New EDM4hep schema version 1 not backward compatible

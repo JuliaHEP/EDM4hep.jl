@@ -33,11 +33,17 @@ Setting the event model is needed to be done only the first time
 
 ````julia
 using EDM4hep
+EDM4hep.set_edmodel("eic")  ## select the event model to use
 using EDM4hep.RootIO
 using EDM4hep.Histograms
 using EDM4hep.Analysis
 using Plots
 using LinearAlgebra
+````
+
+````
+[ Info: New edmodel set; restart your Julia session for this change to take effect!
+
 ````
 
 ## Open the data file

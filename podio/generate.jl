@@ -395,4 +395,4 @@ function gen_model(sections=[])
 end
 
 gen_model(["hep"])
-#gen_model(["hep", "eic"])
+gen_model(["hep", "eic"])

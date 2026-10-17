@@ -1,4 +1,5 @@
 using EDM4hep
+EDM4hep.set_edmodel("eic")  ## select the event model to use
 using EDM4hep.RootIO
 using EDM4hep.Histograms
 using EDM4hep.Analysis

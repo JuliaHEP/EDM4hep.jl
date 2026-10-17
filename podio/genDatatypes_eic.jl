@@ -26,6 +26,7 @@ Sense wire hit, knowing only the distance to the wire. The circle representing p
 - `type::Int32`:  type of the raw data hit
 - `quality::Int32`:  quality bit flag of the hit
 - `time::Float32`:  time of the hit
+- `timeError::Float32`:  error measured on time
 - `eDep::Float32`:  energy deposited by the hit
 - `eDepError::Float32`:  error on eDep
 - `wireStereoAngle::Float32`:  angle between the sense wire axis and the drift chamber axis (usually the z-axis) - use it together with wireAzimuthalAngle to get the wire direction
@@ -45,6 +46,7 @@ struct edm4hep!SenseWireHit <: edm4hep!TrackerHit
     type::Int32                      #  type of the raw data hit
     quality::Int32                   #  quality bit flag of the hit
     time::Float32                    #  time of the hit
+    timeError::Float32               #  error measured on time
     eDep::Float32                    #  energy deposited by the hit
     eDepError::Float32               #  error on eDep
     wireStereoAngle::Float32         #  angle between the sense wire axis and the drift chamber axis (usually the z-axis) - use it together with wireAzimuthalAngle to get the wire direction
@@ -57,8 +59,8 @@ struct edm4hep!SenseWireHit <: edm4hep!TrackerHit
     nElectrons::PVector{edm4hep!SenseWireHit,UInt16,1}  #  number of electrons for each cluster (number of clusters = vector size)
 end
 
-function edm4hep!SenseWireHit(;cellID=zero(UInt64), type=zero(Int32), quality=zero(Int32), time=zero(Float32), eDep=zero(Float32), eDepError=zero(Float32), wireStereoAngle=zero(Float32), wireAzimuthalAngle=zero(Float32), position=edm4hep!Vector3d(), positionAlongWireError=zero(Float64), distanceToWire=zero(Float32), distanceToWireError=zero(Float32), nElectrons=PVector{edm4hep!SenseWireHit,UInt16,1}())
-    edm4hep!SenseWireHit(-1, cellID, type, quality, time, eDep, eDepError, wireStereoAngle, wireAzimuthalAngle, position, positionAlongWireError, distanceToWire, distanceToWireError, nElectrons)
+function edm4hep!SenseWireHit(;cellID=zero(UInt64), type=zero(Int32), quality=zero(Int32), time=zero(Float32), timeError=zero(Float32), eDep=zero(Float32), eDepError=zero(Float32), wireStereoAngle=zero(Float32), wireAzimuthalAngle=zero(Float32), position=edm4hep!Vector3d(), positionAlongWireError=zero(Float64), distanceToWire=zero(Float32), distanceToWireError=zero(Float32), nElectrons=PVector{edm4hep!SenseWireHit,UInt16,1}())
+    edm4hep!SenseWireHit(-1, cellID, type, quality, time, timeError, eDep, eDepError, wireStereoAngle, wireAzimuthalAngle, position, positionAlongWireError, distanceToWire, distanceToWireError, nElectrons)
 end
 
 function setNElectrons(o::edm4hep!SenseWireHit, v::AbstractVector{UInt16})
@@ -74,6 +76,7 @@ Tracker hit
 - `type::Int32`:  type of raw data hit
 - `quality::Int32`:  quality bit flag of the hit
 - `time::Float32`:  time of the hit
+- `timeError::Float32`:  error measured on time
 - `eDep::Float32`:  energy deposited on the hit
 - `eDepError::Float32`:  error measured on eDep
 - `position::edm4hep!Vector3d`:  hit position
@@ -86,14 +89,15 @@ struct edm4hep!TrackerHit3D <: edm4hep!TrackerHit
     type::Int32                      #  type of raw data hit
     quality::Int32                   #  quality bit flag of the hit
     time::Float32                    #  time of the hit
+    timeError::Float32               #  error measured on time
     eDep::Float32                    #  energy deposited on the hit
     eDepError::Float32               #  error measured on eDep
     position::edm4hep!Vector3d       #  hit position
     covMatrix::edm4hep!CovMatrix3f   #  covariance matrix of the position (x,y,z)
 end
 
-function edm4hep!TrackerHit3D(;cellID=zero(UInt64), type=zero(Int32), quality=zero(Int32), time=zero(Float32), eDep=zero(Float32), eDepError=zero(Float32), position=edm4hep!Vector3d(), covMatrix=edm4hep!CovMatrix3f())
-    edm4hep!TrackerHit3D(-1, cellID, type, quality, time, eDep, eDepError, position, covMatrix)
+function edm4hep!TrackerHit3D(;cellID=zero(UInt64), type=zero(Int32), quality=zero(Int32), time=zero(Float32), timeError=zero(Float32), eDep=zero(Float32), eDepError=zero(Float32), position=edm4hep!Vector3d(), covMatrix=edm4hep!CovMatrix3f())
+    edm4hep!TrackerHit3D(-1, cellID, type, quality, time, timeError, eDep, eDepError, position, covMatrix)
 end
 
 """
@@ -336,6 +340,64 @@ function setSubdetectorEnergies(o::edm4hep!Cluster, v::AbstractVector{Float32})
     o = @set o.subdetectorEnergies = v
     update(o)
 end
+"""
+Raw hit from a CALOROC1A/B chip
+- Author: D. Anderson, S. Joosten, T. Protzman, N. Novitzky, D. Kalinkin, M. Zurek, M. H. Kim
+# Fields
+- `cellID::UInt64`:  Detector specific (geometrical) cell id
+- `samplePhase::Int32`:  Phase of samples in [# samples], for synchronizing across chips
+- `timeStamp::Int32`:  [TDC counts]
+- `aSamples::PVector{edm4eic!CALOROC1ASample}`:  ADC, Time of Arrival (TOA), and Time over Threshold (TOT) values for each sample read out
+- `bSamples::PVector{edm4eic!CALOROC1BSample}`:  Low- and high-gain ADC and Time of Arrival (TOA) values for each sample read out
+# Methods
+- `setASamples(object::edm4eic!RawCALOROCHit, v::AbstractVector{edm4eic!CALOROC1ASample})`: assign a set of values to the `aSamples` vector member
+- `setBSamples(object::edm4eic!RawCALOROCHit, v::AbstractVector{edm4eic!CALOROC1BSample})`: assign a set of values to the `bSamples` vector member
+"""
+struct edm4eic!RawCALOROCHit <: POD
+    index::ObjectID{edm4eic!RawCALOROCHit}  # ObjectID of himself
+    #---Data Members
+    cellID::UInt64                   #  Detector specific (geometrical) cell id
+    samplePhase::Int32               #  Phase of samples in [# samples], for synchronizing across chips
+    timeStamp::Int32                 #  [TDC counts]
+    #---VectorMembers
+    aSamples::PVector{edm4eic!RawCALOROCHit,edm4eic!CALOROC1ASample,1}  #  ADC, Time of Arrival (TOA), and Time over Threshold (TOT) values for each sample read out
+    bSamples::PVector{edm4eic!RawCALOROCHit,edm4eic!CALOROC1BSample,2}  #  Low- and high-gain ADC and Time of Arrival (TOA) values for each sample read out
+end
+
+function edm4eic!RawCALOROCHit(;cellID=zero(UInt64), samplePhase=zero(Int32), timeStamp=zero(Int32), aSamples=PVector{edm4eic!RawCALOROCHit,edm4eic!CALOROC1ASample,1}(), bSamples=PVector{edm4eic!RawCALOROCHit,edm4eic!CALOROC1BSample,2}())
+    edm4eic!RawCALOROCHit(-1, cellID, samplePhase, timeStamp, aSamples, bSamples)
+end
+
+function setASamples(o::edm4eic!RawCALOROCHit, v::AbstractVector{edm4eic!CALOROC1ASample})
+    iszero(o.index) && (o = register(o))
+    o = @set o.aSamples = v
+    update(o)
+end
+function setBSamples(o::edm4eic!RawCALOROCHit, v::AbstractVector{edm4eic!CALOROC1BSample})
+    iszero(o.index) && (o = register(o))
+    o = @set o.bSamples = v
+    update(o)
+end
+"""
+IRT 2.1 output (radiator level)
+- Author: A. Kiselev
+# Fields
+- `npe::UInt16`:  Detected photoelectron count
+- `nhits::UInt16`:  Hit count associated with this radiator by IRT engine
+- `angle::Float32`:  Reconstructed Cherenkov angle
+"""
+struct edm4eic!IrtRadiatorInfo <: POD
+    index::ObjectID{edm4eic!IrtRadiatorInfo}  # ObjectID of himself
+    #---Data Members
+    npe::UInt16                      #  Detected photoelectron count
+    nhits::UInt16                    #  Hit count associated with this radiator by IRT engine
+    angle::Float32                   #  Reconstructed Cherenkov angle
+end
+
+function edm4eic!IrtRadiatorInfo(;npe=zero(UInt16), nhits=zero(UInt16), angle=zero(Float32))
+    edm4eic!IrtRadiatorInfo(-1, npe, nhits, angle)
+end
+
 """
 The Monte Carlo particle - based on the lcio::MCParticle.
 - Author: EDM4hep authors
@@ -791,6 +853,7 @@ Tracker hit plane
 - `type::Int32`:  type of raw data hit
 - `quality::Int32`:  quality bit flag of the hit
 - `time::Float32`:  time of the hit
+- `timeError::Float32`:  error measured on time
 - `eDep::Float32`:  energy deposited on the hit
 - `eDepError::Float32`:  error measured on eDep
 - `u::edm4hep!Vector2f`:  direction of the first measurement given as (theta, phi) in spherical coordinates
@@ -807,6 +870,7 @@ struct edm4hep!TrackerHitPlane <: edm4hep!TrackerHit
     type::Int32                      #  type of raw data hit
     quality::Int32                   #  quality bit flag of the hit
     time::Float32                    #  time of the hit
+    timeError::Float32               #  error measured on time
     eDep::Float32                    #  energy deposited on the hit
     eDepError::Float32               #  error measured on eDep
     u::edm4hep!Vector2f              #  direction of the first measurement given as (theta, phi) in spherical coordinates
@@ -817,8 +881,8 @@ struct edm4hep!TrackerHitPlane <: edm4hep!TrackerHit
     covMatrix::edm4hep!CovMatrix3f   #  covariance of the position (x,y,z)
 end
 
-function edm4hep!TrackerHitPlane(;cellID=zero(UInt64), type=zero(Int32), quality=zero(Int32), time=zero(Float32), eDep=zero(Float32), eDepError=zero(Float32), u=edm4hep!Vector2f(), v=edm4hep!Vector2f(), du=zero(Float32), dv=zero(Float32), position=edm4hep!Vector3d(), covMatrix=edm4hep!CovMatrix3f())
-    edm4hep!TrackerHitPlane(-1, cellID, type, quality, time, eDep, eDepError, u, v, du, dv, position, covMatrix)
+function edm4hep!TrackerHitPlane(;cellID=zero(UInt64), type=zero(Int32), quality=zero(Int32), time=zero(Float32), timeError=zero(Float32), eDep=zero(Float32), eDepError=zero(Float32), u=edm4hep!Vector2f(), v=edm4hep!Vector2f(), du=zero(Float32), dv=zero(Float32), position=edm4hep!Vector3d(), covMatrix=edm4hep!CovMatrix3f())
+    edm4hep!TrackerHitPlane(-1, cellID, type, quality, time, timeError, eDep, eDepError, u, v, du, dv, position, covMatrix)
 end
 
 """
@@ -1123,10 +1187,14 @@ EIC hit cluster, reworked to more closely resemble EDM4hep
 - `nhits::UInt32`:  Number of hits in the cluster.
 - `position::edm4hep!Vector3f`:  Global position of the cluster [mm].
 - `positionError::edm4eic!Cov3f`:  Covariance matrix of the position (6 Parameters).
-- `intrinsicTheta::Float32`:  Intrinsic cluster propagation direction polar angle [rad]
-- `intrinsicPhi::Float32`:  Intrinsic cluster propagation direction azimuthal angle [rad]
+- `radius::Float32`:  Cluster radius [mm].
+- `dispersion::Float32`:  Cluster dispersion [mm].
+- `principalAxesLengthsXYZ::SVector{3,Float32}`:  Lengths along the cluster's principal axes [mm], sorted in descending order (equivalent to sqrt of eigenvalues of the position covariance). For an XY planar detector one can expect this to be [sigma_max, sigma_min, 0].
+- `principalAxesLengthsThetaPhi::SVector{2,Float32}`:  Lengths along the cluster's principal axes [rad], sorted in descending order.
+- `intrinsicTheta::Float32`:  Intrinsic cluster propagation direction polar angle [rad].
+- `intrinsicPhi::Float32`:  Intrinsic cluster propagation direction azimuthal angle [rad]. For an XY planar detector one can expect this to be the tilt of "sigma_max" axis.
 - `intrinsicDirectionError::edm4eic!Cov2f`:  Error on the intrinsic cluster propagation direction
-- `shapeParameters::PVector{Float32}`:  Should be set in metadata, for now it's a list of -- radius [mm], dispersion [mm], 2 entries for theta-phi widths [rad], 3 entries for x-y-z widths [mm].
+- `shapeParameters::PVector{Float32}`:  [DEPRECATED] use radius, dispersion, principalAxesLengthsXYZ/ThetaPhi instead.
 - `hitContributions::PVector{Float32}`:  Energy contributions of the hits. Runs parallel to ::hits()
 - `subdetectorEnergies::PVector{Float32}`:  Energies observed in each subdetector used for this cluster.
 # Relations
@@ -1155,11 +1223,15 @@ struct edm4eic!Cluster <: POD
     nhits::UInt32                    #  Number of hits in the cluster.
     position::edm4hep!Vector3f       #  Global position of the cluster [mm].
     positionError::edm4eic!Cov3f     #  Covariance matrix of the position (6 Parameters).
-    intrinsicTheta::Float32          #  Intrinsic cluster propagation direction polar angle [rad]
-    intrinsicPhi::Float32            #  Intrinsic cluster propagation direction azimuthal angle [rad]
+    radius::Float32                  #  Cluster radius [mm].
+    dispersion::Float32              #  Cluster dispersion [mm].
+    principalAxesLengthsXYZ::SVector{3,Float32}  #  Lengths along the cluster's principal axes [mm], sorted in descending order (equivalent to sqrt of eigenvalues of the position covariance). For an XY planar detector one can expect this to be [sigma_max, sigma_min, 0].
+    principalAxesLengthsThetaPhi::SVector{2,Float32}  #  Lengths along the cluster's principal axes [rad], sorted in descending order.
+    intrinsicTheta::Float32          #  Intrinsic cluster propagation direction polar angle [rad].
+    intrinsicPhi::Float32            #  Intrinsic cluster propagation direction azimuthal angle [rad]. For an XY planar detector one can expect this to be the tilt of "sigma_max" axis.
     intrinsicDirectionError::edm4eic!Cov2f  #  Error on the intrinsic cluster propagation direction
     #---VectorMembers
-    shapeParameters::PVector{edm4eic!Cluster,Float32,1}  #  Should be set in metadata, for now it's a list of -- radius [mm], dispersion [mm], 2 entries for theta-phi widths [rad], 3 entries for x-y-z widths [mm].
+    shapeParameters::PVector{edm4eic!Cluster,Float32,1}  #  [DEPRECATED] use radius, dispersion, principalAxesLengthsXYZ/ThetaPhi instead.
     hitContributions::PVector{edm4eic!Cluster,Float32,2}  #  Energy contributions of the hits. Runs parallel to ::hits()
     subdetectorEnergies::PVector{edm4eic!Cluster,Float32,3}  #  Energies observed in each subdetector used for this cluster.
     #---OneToManyRelations
@@ -1168,8 +1240,8 @@ struct edm4eic!Cluster <: POD
     particleIDs::Relation{edm4eic!Cluster,edm4hep!ParticleID,3}  #  Particle IDs sorted by likelihood
 end
 
-function edm4eic!Cluster(;type=zero(Int32), energy=zero(Float32), energyError=zero(Float32), time=zero(Float32), timeError=zero(Float32), nhits=zero(UInt32), position=edm4hep!Vector3f(), positionError=edm4eic!Cov3f(), intrinsicTheta=zero(Float32), intrinsicPhi=zero(Float32), intrinsicDirectionError=edm4eic!Cov2f(), shapeParameters=PVector{edm4eic!Cluster,Float32,1}(), hitContributions=PVector{edm4eic!Cluster,Float32,2}(), subdetectorEnergies=PVector{edm4eic!Cluster,Float32,3}(), clusters=Relation{edm4eic!Cluster,edm4eic!Cluster,1}(), hits=Relation{edm4eic!Cluster,edm4eic!CalorimeterHit,2}(), particleIDs=Relation{edm4eic!Cluster,edm4hep!ParticleID,3}())
-    edm4eic!Cluster(-1, type, energy, energyError, time, timeError, nhits, position, positionError, intrinsicTheta, intrinsicPhi, intrinsicDirectionError, shapeParameters, hitContributions, subdetectorEnergies, clusters, hits, particleIDs)
+function edm4eic!Cluster(;type=zero(Int32), energy=zero(Float32), energyError=zero(Float32), time=zero(Float32), timeError=zero(Float32), nhits=zero(UInt32), position=edm4hep!Vector3f(), positionError=edm4eic!Cov3f(), radius=zero(Float32), dispersion=zero(Float32), principalAxesLengthsXYZ=zero(SVector{3,Float32}), principalAxesLengthsThetaPhi=zero(SVector{2,Float32}), intrinsicTheta=zero(Float32), intrinsicPhi=zero(Float32), intrinsicDirectionError=edm4eic!Cov2f(), shapeParameters=PVector{edm4eic!Cluster,Float32,1}(), hitContributions=PVector{edm4eic!Cluster,Float32,2}(), subdetectorEnergies=PVector{edm4eic!Cluster,Float32,3}(), clusters=Relation{edm4eic!Cluster,edm4eic!Cluster,1}(), hits=Relation{edm4eic!Cluster,edm4eic!CalorimeterHit,2}(), particleIDs=Relation{edm4eic!Cluster,edm4hep!ParticleID,3}())
+    edm4eic!Cluster(-1, type, energy, energyError, time, timeError, nhits, position, positionError, radius, dispersion, principalAxesLengthsXYZ, principalAxesLengthsThetaPhi, intrinsicTheta, intrinsicPhi, intrinsicDirectionError, shapeParameters, hitContributions, subdetectorEnergies, clusters, hits, particleIDs)
 end
 
 function pushToClusters(c::edm4eic!Cluster, o::edm4eic!Cluster)
@@ -1221,8 +1293,6 @@ end
 Association between a Cluster and a MCParticle
 - Author: S. Joosten
 # Fields
-- `simID::UInt32`:  Index of corresponding MCParticle (position in MCParticles array)
-- `recID::UInt32`:  Index of corresponding Cluster (position in Clusters array)
 - `weight::Float32`:  weight of this association
 # Relations
 - `rec::edm4eic!Cluster`:  reference to the cluster
@@ -1231,16 +1301,14 @@ Association between a Cluster and a MCParticle
 struct edm4eic!MCRecoClusterParticleAssociation <: POD
     index::ObjectID{edm4eic!MCRecoClusterParticleAssociation}  # ObjectID of himself
     #---Data Members
-    simID::UInt32                    #  Index of corresponding MCParticle (position in MCParticles array)
-    recID::UInt32                    #  Index of corresponding Cluster (position in Clusters array)
     weight::Float32                  #  weight of this association
     #---OneToOneRelations
     rec_idx::ObjectID{edm4eic!Cluster}  #  reference to the cluster
     sim_idx::ObjectID{edm4hep!MCParticle}  #  reference to the Monte-Carlo particle
 end
 
-function edm4eic!MCRecoClusterParticleAssociation(;simID=zero(UInt32), recID=zero(UInt32), weight=zero(Float32), rec=-1, sim=-1)
-    edm4eic!MCRecoClusterParticleAssociation(-1, simID, recID, weight, rec, sim)
+function edm4eic!MCRecoClusterParticleAssociation(;weight=zero(Float32), rec=-1, sim=-1)
+    edm4eic!MCRecoClusterParticleAssociation(-1, weight, rec, sim)
 end
 
 function Base.getproperty(obj::edm4eic!MCRecoClusterParticleAssociation, sym::Symbol)
@@ -1420,48 +1488,18 @@ function Base.getproperty(obj::edm4eic!MCRecoTrackerHitAssociation, sym::Symbol)
     end
 end
 """
-Raw hit from an HGCROC chip
-- Author: D. Anderson, S. Joosten, T. Protzman, N. Novitzky, D. Kalinkin
-# Fields
-- `cellID::UInt64`:  Detector specific (geometrical) cell id
-- `samplePhase::Int32`:  Phase of samples in [# samples], for synchronizing across chips
-- `timeStamp::Int32`:  [TDC counts]
-- `samples::PVector{edm4eic!HGCROCSample}`:  ADC, Time of Arrival (TOA), and Time over Threshold (TOT) values for each sample read out
-# Methods
-- `setSamples(object::edm4eic!RawHGCROCHit, v::AbstractVector{edm4eic!HGCROCSample})`: assign a set of values to the `samples` vector member
-"""
-struct edm4eic!RawHGCROCHit <: POD
-    index::ObjectID{edm4eic!RawHGCROCHit}  # ObjectID of himself
-    #---Data Members
-    cellID::UInt64                   #  Detector specific (geometrical) cell id
-    samplePhase::Int32               #  Phase of samples in [# samples], for synchronizing across chips
-    timeStamp::Int32                 #  [TDC counts]
-    #---VectorMembers
-    samples::PVector{edm4eic!RawHGCROCHit,edm4eic!HGCROCSample,1}  #  ADC, Time of Arrival (TOA), and Time over Threshold (TOT) values for each sample read out
-end
-
-function edm4eic!RawHGCROCHit(;cellID=zero(UInt64), samplePhase=zero(Int32), timeStamp=zero(Int32), samples=PVector{edm4eic!RawHGCROCHit,edm4eic!HGCROCSample,1}())
-    edm4eic!RawHGCROCHit(-1, cellID, samplePhase, timeStamp, samples)
-end
-
-function setSamples(o::edm4eic!RawHGCROCHit, v::AbstractVector{edm4eic!HGCROCSample})
-    iszero(o.index) && (o = register(o))
-    o = @set o.samples = v
-    update(o)
-end
-"""
 ACTS Bound Track parameters
 - Author: W. Armstrong, S. Joosten, J. Osborn
 # Fields
 - `type::Int32`:  Type of track parameters (-1/seed, 0/head, ...)
 - `surface::UInt64`:  Surface for bound parameters (geometryID)
 - `loc::edm4hep!Vector2f`:  2D location on surface
-- `theta::Float32`:  Track polar angle [rad]
 - `phi::Float32`:  Track azimuthal angle [rad]
+- `theta::Float32`:  Track polar angle [rad]
 - `qOverP::Float32`:  [e/GeV]
 - `time::Float32`:  Track time [ns]
 - `pdg::Int32`:  pdg pid for these parameters
-- `covariance::edm4eic!Cov6f`:  Full covariance in basis [l0,l1,theta,phi,q/p,t]
+- `covariance::edm4eic!Cov6f`:  Full covariance in basis following ACTS convention [l0,l1,phi,theta,q/p,t]
 """
 struct edm4eic!TrackParameters <: POD
     index::ObjectID{edm4eic!TrackParameters}  # ObjectID of himself
@@ -1469,16 +1507,16 @@ struct edm4eic!TrackParameters <: POD
     type::Int32                      #  Type of track parameters (-1/seed, 0/head, ...)
     surface::UInt64                  #  Surface for bound parameters (geometryID)
     loc::edm4hep!Vector2f            #  2D location on surface
-    theta::Float32                   #  Track polar angle [rad]
     phi::Float32                     #  Track azimuthal angle [rad]
+    theta::Float32                   #  Track polar angle [rad]
     qOverP::Float32                  #  [e/GeV]
     time::Float32                    #  Track time [ns]
     pdg::Int32                       #  pdg pid for these parameters
-    covariance::edm4eic!Cov6f        #  Full covariance in basis [l0,l1,theta,phi,q/p,t]
+    covariance::edm4eic!Cov6f        #  Full covariance in basis following ACTS convention [l0,l1,phi,theta,q/p,t]
 end
 
-function edm4eic!TrackParameters(;type=zero(Int32), surface=zero(UInt64), loc=edm4hep!Vector2f(), theta=zero(Float32), phi=zero(Float32), qOverP=zero(Float32), time=zero(Float32), pdg=zero(Int32), covariance=edm4eic!Cov6f())
-    edm4eic!TrackParameters(-1, type, surface, loc, theta, phi, qOverP, time, pdg, covariance)
+function edm4eic!TrackParameters(;type=zero(Int32), surface=zero(UInt64), loc=edm4hep!Vector2f(), phi=zero(Float32), theta=zero(Float32), qOverP=zero(Float32), time=zero(Float32), pdg=zero(Int32), covariance=edm4eic!Cov6f())
+    edm4eic!TrackParameters(-1, type, surface, loc, phi, theta, qOverP, time, pdg, covariance)
 end
 
 """
@@ -1486,6 +1524,7 @@ Seed info from the realistic seed finder
 - Author: S. Li, B. Schmookler, J. Osborn
 # Fields
 - `perigee::edm4hep!Vector3f`:  Vector for the perigee (line surface)
+- `quality::Float32`:  Seed quality reported by finder
 # Relations
 - `params::edm4eic!TrackParameters`:  Initial track parameters
 - `hits::edm4eic!TrackerHit`:  Tracker hits triplet for seeding
@@ -1497,14 +1536,15 @@ struct edm4eic!TrackSeed <: POD
     index::ObjectID{edm4eic!TrackSeed}  # ObjectID of himself
     #---Data Members
     perigee::edm4hep!Vector3f        #  Vector for the perigee (line surface)
+    quality::Float32                 #  Seed quality reported by finder
     #---OneToManyRelations
     hits::Relation{edm4eic!TrackSeed,edm4eic!TrackerHit,1}  #  Tracker hits triplet for seeding
     #---OneToOneRelations
     params_idx::ObjectID{edm4eic!TrackParameters}  #  Initial track parameters
 end
 
-function edm4eic!TrackSeed(;perigee=edm4hep!Vector3f(), hits=Relation{edm4eic!TrackSeed,edm4eic!TrackerHit,1}(), params=-1)
-    edm4eic!TrackSeed(-1, perigee, hits, params)
+function edm4eic!TrackSeed(;perigee=edm4hep!Vector3f(), quality=zero(Float32), hits=Relation{edm4eic!TrackSeed,edm4eic!TrackerHit,1}(), params=-1)
+    edm4eic!TrackSeed(-1, perigee, quality, hits, params)
 end
 
 function Base.getproperty(obj::edm4eic!TrackSeed, sym::Symbol)
@@ -1701,6 +1741,39 @@ function popFromTracks(c::edm4eic!Track)
     update(c)
 end
 """
+Match between a ProtoCluster and a Track
+- Author: D. Anderson, D. Kalinkin
+# Fields
+- `weight::Float32`:  weight of this association
+# Relations
+- `from::edm4eic!Track`:  reference to the track
+- `to::edm4eic!ProtoCluster`:  reference to the protocluster
+"""
+struct edm4eic!TrackProtoClusterMatch <: POD
+    index::ObjectID{edm4eic!TrackProtoClusterMatch}  # ObjectID of himself
+    #---Data Members
+    weight::Float32                  #  weight of this association
+    #---OneToOneRelations
+    from_idx::ObjectID{edm4eic!Track}  #  reference to the track
+    to_idx::ObjectID{edm4eic!ProtoCluster}  #  reference to the protocluster
+end
+
+function edm4eic!TrackProtoClusterMatch(;weight=zero(Float32), from=-1, to=-1)
+    edm4eic!TrackProtoClusterMatch(-1, weight, from, to)
+end
+
+function Base.getproperty(obj::edm4eic!TrackProtoClusterMatch, sym::Symbol)
+    if sym == :from
+        idx = getfield(obj, :from_idx)
+        return iszero(idx) ? nothing : convert(edm4eic!Track, idx)
+    elseif sym == :to
+        idx = getfield(obj, :to_idx)
+        return iszero(idx) ? nothing : convert(edm4eic!ProtoCluster, idx)
+    else # fallback to getfield
+        return getfield(obj, sym)
+    end
+end
+"""
 Match between a Cluster and a Track
 - Author: D. Anderson, D. Brandenburg, D. Kalinkin, S. Joosten
 # Fields
@@ -1839,11 +1912,57 @@ function setThetaPhiPhotons(o::edm4eic!CherenkovParticleID, v::AbstractVector{ed
     update(o)
 end
 """
+IRT 2.1 output (track level)
+- Author: A. Kiselev
+# Fields
+- `PDG::Int32`:  Reconstructed most probable PDG code
+- `npe::UInt16`:  Detected photoelectron count
+- `nhits::UInt16`:  Hit count associated with this particle by IRT engine
+# Relations
+- `track::edm4eic!Track`:  charged particle track
+- `radiators::edm4eic!IrtRadiatorInfo`:  radiator-related information
+# Methods
+- `pushToRadiators(obj::edm4eic!IrtParticle, robj::edm4eic!IrtRadiatorInfo)`: push related object to the `radiators` relation
+- `popFromRadiators(obj::edm4eic!IrtParticle)`: pop last related object from `radiators` relation
+"""
+struct edm4eic!IrtParticle <: POD
+    index::ObjectID{edm4eic!IrtParticle}  # ObjectID of himself
+    #---Data Members
+    PDG::Int32                       #  Reconstructed most probable PDG code
+    npe::UInt16                      #  Detected photoelectron count
+    nhits::UInt16                    #  Hit count associated with this particle by IRT engine
+    #---OneToManyRelations
+    radiators::Relation{edm4eic!IrtParticle,edm4eic!IrtRadiatorInfo,1}  #  radiator-related information
+    #---OneToOneRelations
+    track_idx::ObjectID{edm4eic!Track}  #  charged particle track
+end
+
+function edm4eic!IrtParticle(;PDG=zero(Int32), npe=zero(UInt16), nhits=zero(UInt16), radiators=Relation{edm4eic!IrtParticle,edm4eic!IrtRadiatorInfo,1}(), track=-1)
+    edm4eic!IrtParticle(-1, PDG, npe, nhits, radiators, track)
+end
+
+function Base.getproperty(obj::edm4eic!IrtParticle, sym::Symbol)
+    if sym == :track
+        idx = getfield(obj, :track_idx)
+        return iszero(idx) ? nothing : convert(edm4eic!Track, idx)
+    else # fallback to getfield
+        return getfield(obj, sym)
+    end
+end
+function pushToRadiators(c::edm4eic!IrtParticle, o::edm4eic!IrtRadiatorInfo)
+    iszero(c.index) && (c = register(c))
+    c = @set c.radiators = push(c.radiators, o)
+    update(c)
+end
+function popFromRadiators(c::edm4eic!IrtParticle)
+    iszero(c.index) && (c = register(c))
+    c = @set c.radiators = pop(c.radiators)
+    update(c)
+end
+"""
 Association between a Track and a MCParticle
 - Author: S. Joosten
 # Fields
-- `simID::UInt32`:  Index of corresponding MCParticle (position in MCParticles array)
-- `recID::UInt32`:  Index of corresponding Track (position in Tracks array)
 - `weight::Float32`:  weight of this association
 # Relations
 - `rec::edm4eic!Track`:  reference to the track
@@ -1852,16 +1971,14 @@ Association between a Track and a MCParticle
 struct edm4eic!MCRecoTrackParticleAssociation <: POD
     index::ObjectID{edm4eic!MCRecoTrackParticleAssociation}  # ObjectID of himself
     #---Data Members
-    simID::UInt32                    #  Index of corresponding MCParticle (position in MCParticles array)
-    recID::UInt32                    #  Index of corresponding Track (position in Tracks array)
     weight::Float32                  #  weight of this association
     #---OneToOneRelations
     rec_idx::ObjectID{edm4eic!Track} #  reference to the track
     sim_idx::ObjectID{edm4hep!MCParticle}  #  reference to the Monte-Carlo particle
 end
 
-function edm4eic!MCRecoTrackParticleAssociation(;simID=zero(UInt32), recID=zero(UInt32), weight=zero(Float32), rec=-1, sim=-1)
-    edm4eic!MCRecoTrackParticleAssociation(-1, simID, recID, weight, rec, sim)
+function edm4eic!MCRecoTrackParticleAssociation(;weight=zero(Float32), rec=-1, sim=-1)
+    edm4eic!MCRecoTrackParticleAssociation(-1, weight, rec, sim)
 end
 
 function Base.getproperty(obj::edm4eic!MCRecoTrackParticleAssociation, sym::Symbol)
@@ -1962,8 +2079,6 @@ end
 Association between a Vertex and a MCParticle
 - Author: S. Joosten
 # Fields
-- `simID::UInt32`:  Index of corresponding MCParticle (position in MCParticles array)
-- `recID::UInt32`:  Index of corresponding Vertex (position in Vertices array)
 - `weight::Float32`:  weight of this association
 # Relations
 - `rec::edm4eic!Vertex`:  reference to the vertex
@@ -1972,16 +2087,14 @@ Association between a Vertex and a MCParticle
 struct edm4eic!MCRecoVertexParticleAssociation <: POD
     index::ObjectID{edm4eic!MCRecoVertexParticleAssociation}  # ObjectID of himself
     #---Data Members
-    simID::UInt32                    #  Index of corresponding MCParticle (position in MCParticles array)
-    recID::UInt32                    #  Index of corresponding Vertex (position in Vertices array)
     weight::Float32                  #  weight of this association
     #---OneToOneRelations
     rec_idx::ObjectID{edm4eic!Vertex}  #  reference to the vertex
     sim_idx::ObjectID{edm4hep!MCParticle}  #  reference to the Monte-Carlo particle
 end
 
-function edm4eic!MCRecoVertexParticleAssociation(;simID=zero(UInt32), recID=zero(UInt32), weight=zero(Float32), rec=-1, sim=-1)
-    edm4eic!MCRecoVertexParticleAssociation(-1, simID, recID, weight, rec, sim)
+function edm4eic!MCRecoVertexParticleAssociation(;weight=zero(Float32), rec=-1, sim=-1)
+    edm4eic!MCRecoVertexParticleAssociation(-1, weight, rec, sim)
 end
 
 function Base.getproperty(obj::edm4eic!MCRecoVertexParticleAssociation, sym::Symbol)
@@ -2140,11 +2253,50 @@ function popFromHadrons(c::edm4eic!HadronicFinalState)
     update(c)
 end
 """
+A reconstructed jet, inspired by the FastJet PseudoJet
+- Author: D. Anderson
+# Fields
+- `type::UInt32`:  Jet type as enumerated in fastjet::JetAlgorithm
+- `area::Float32`:  Jet area
+- `energy::Float32`:  Jet energy [GeV]
+- `backgroundEnergyDensity::Float32`:  Background energy density [GeV/area]
+- `momentum::edm4hep!Vector3f`:  Jet 3-momentum [GeV]
+# Relations
+- `constituents::edm4eic!ReconstructedParticle`:  Constituents of this jet
+# Methods
+- `pushToConstituents(obj::edm4eic!Jet, robj::edm4eic!ReconstructedParticle)`: push related object to the `constituents` relation
+- `popFromConstituents(obj::edm4eic!Jet)`: pop last related object from `constituents` relation
+"""
+struct edm4eic!Jet <: POD
+    index::ObjectID{edm4eic!Jet}     # ObjectID of himself
+    #---Data Members
+    type::UInt32                     #  Jet type as enumerated in fastjet::JetAlgorithm
+    area::Float32                    #  Jet area
+    energy::Float32                  #  Jet energy [GeV]
+    backgroundEnergyDensity::Float32 #  Background energy density [GeV/area]
+    momentum::edm4hep!Vector3f       #  Jet 3-momentum [GeV]
+    #---OneToManyRelations
+    constituents::Relation{edm4eic!Jet,edm4eic!ReconstructedParticle,1}  #  Constituents of this jet
+end
+
+function edm4eic!Jet(;type=zero(UInt32), area=zero(Float32), energy=zero(Float32), backgroundEnergyDensity=zero(Float32), momentum=edm4hep!Vector3f(), constituents=Relation{edm4eic!Jet,edm4eic!ReconstructedParticle,1}())
+    edm4eic!Jet(-1, type, area, energy, backgroundEnergyDensity, momentum, constituents)
+end
+
+function pushToConstituents(c::edm4eic!Jet, o::edm4eic!ReconstructedParticle)
+    iszero(c.index) && (c = register(c))
+    c = @set c.constituents = push(c.constituents, o)
+    update(c)
+end
+function popFromConstituents(c::edm4eic!Jet)
+    iszero(c.index) && (c = register(c))
+    c = @set c.constituents = pop(c.constituents)
+    update(c)
+end
+"""
 Used to keep track of the correspondence between MC and reconstructed particles
 - Author: S. Joosten
 # Fields
-- `simID::UInt32`:  Index of corresponding MCParticle (position in MCParticles array)
-- `recID::UInt32`:  Index of corresponding ReconstructedParticle (position in ReconstructedParticles array)
 - `weight::Float32`:  weight of this association
 # Relations
 - `rec::edm4eic!ReconstructedParticle`:  reference to the reconstructed particle
@@ -2153,16 +2305,14 @@ Used to keep track of the correspondence between MC and reconstructed particles
 struct edm4eic!MCRecoParticleAssociation <: POD
     index::ObjectID{edm4eic!MCRecoParticleAssociation}  # ObjectID of himself
     #---Data Members
-    simID::UInt32                    #  Index of corresponding MCParticle (position in MCParticles array)
-    recID::UInt32                    #  Index of corresponding ReconstructedParticle (position in ReconstructedParticles array)
     weight::Float32                  #  weight of this association
     #---OneToOneRelations
     rec_idx::ObjectID{edm4eic!ReconstructedParticle}  #  reference to the reconstructed particle
     sim_idx::ObjectID{edm4hep!MCParticle}  #  reference to the Monte-Carlo particle
 end
 
-function edm4eic!MCRecoParticleAssociation(;simID=zero(UInt32), recID=zero(UInt32), weight=zero(Float32), rec=-1, sim=-1)
-    edm4eic!MCRecoParticleAssociation(-1, simID, recID, weight, rec, sim)
+function edm4eic!MCRecoParticleAssociation(;weight=zero(Float32), rec=-1, sim=-1)
+    edm4eic!MCRecoParticleAssociation(-1, weight, rec, sim)
 end
 
 function Base.getproperty(obj::edm4eic!MCRecoParticleAssociation, sym::Symbol)
@@ -2175,6 +2325,84 @@ function Base.getproperty(obj::edm4eic!MCRecoParticleAssociation, sym::Symbol)
     else # fallback to getfield
         return getfield(obj, sym)
     end
+end
+"""
+Positive-definite convex norm of how confidently wrong the reconstruction is,
+with non-negative contributions from various aspects of the reconstruction,
+where a zero value indicates a perfect reconstruction.
+- Author: W. Deconinck, S. Colbert
+# Fields
+- `truthiness::Float32`:  Overall truthiness of the entire event
+- `associationContribution::edm4eic!TruthinessContribution`:  Contribution from all associated particles
+- `unassociatedMCParticlesContribution::Float32`:  Contribution from unassociated MC particles
+- `unassociatedRecoParticlesContribution::Float32`:  Contribution from unassociated reconstructed particles
+- `associationContributions::PVector{edm4eic!TruthinessContribution}`:  Contribution from associated particles
+# Relations
+- `associations::edm4eic!MCRecoParticleAssociation`:  Reference to the associated particles
+- `unassociatedMCParticles::edm4hep!MCParticle`:  Reference to the unassociated MC particles
+- `unassociatedRecoParticles::edm4eic!ReconstructedParticle`:  Reference to the unassociated reconstructed particles
+# Methods
+- `setAssociationContributions(object::edm4eic!Truthiness, v::AbstractVector{edm4eic!TruthinessContribution})`: assign a set of values to the `associationContributions` vector member
+- `pushToAssociations(obj::edm4eic!Truthiness, robj::edm4eic!MCRecoParticleAssociation)`: push related object to the `associations` relation
+- `popFromAssociations(obj::edm4eic!Truthiness)`: pop last related object from `associations` relation
+- `pushToUnassociatedMCParticles(obj::edm4eic!Truthiness, robj::edm4hep!MCParticle)`: push related object to the `unassociatedMCParticles` relation
+- `popFromUnassociatedMCParticles(obj::edm4eic!Truthiness)`: pop last related object from `unassociatedMCParticles` relation
+- `pushToUnassociatedRecoParticles(obj::edm4eic!Truthiness, robj::edm4eic!ReconstructedParticle)`: push related object to the `unassociatedRecoParticles` relation
+- `popFromUnassociatedRecoParticles(obj::edm4eic!Truthiness)`: pop last related object from `unassociatedRecoParticles` relation
+"""
+struct edm4eic!Truthiness <: POD
+    index::ObjectID{edm4eic!Truthiness}  # ObjectID of himself
+    #---Data Members
+    truthiness::Float32              #  Overall truthiness of the entire event
+    associationContribution::edm4eic!TruthinessContribution  #  Contribution from all associated particles
+    unassociatedMCParticlesContribution::Float32  #  Contribution from unassociated MC particles
+    unassociatedRecoParticlesContribution::Float32  #  Contribution from unassociated reconstructed particles
+    #---VectorMembers
+    associationContributions::PVector{edm4eic!Truthiness,edm4eic!TruthinessContribution,1}  #  Contribution from associated particles
+    #---OneToManyRelations
+    associations::Relation{edm4eic!Truthiness,edm4eic!MCRecoParticleAssociation,1}  #  Reference to the associated particles
+    unassociatedMCParticles::Relation{edm4eic!Truthiness,edm4hep!MCParticle,2}  #  Reference to the unassociated MC particles
+    unassociatedRecoParticles::Relation{edm4eic!Truthiness,edm4eic!ReconstructedParticle,3}  #  Reference to the unassociated reconstructed particles
+end
+
+function edm4eic!Truthiness(;truthiness=zero(Float32), associationContribution=edm4eic!TruthinessContribution(), unassociatedMCParticlesContribution=zero(Float32), unassociatedRecoParticlesContribution=zero(Float32), associationContributions=PVector{edm4eic!Truthiness,edm4eic!TruthinessContribution,1}(), associations=Relation{edm4eic!Truthiness,edm4eic!MCRecoParticleAssociation,1}(), unassociatedMCParticles=Relation{edm4eic!Truthiness,edm4hep!MCParticle,2}(), unassociatedRecoParticles=Relation{edm4eic!Truthiness,edm4eic!ReconstructedParticle,3}())
+    edm4eic!Truthiness(-1, truthiness, associationContribution, unassociatedMCParticlesContribution, unassociatedRecoParticlesContribution, associationContributions, associations, unassociatedMCParticles, unassociatedRecoParticles)
+end
+
+function pushToAssociations(c::edm4eic!Truthiness, o::edm4eic!MCRecoParticleAssociation)
+    iszero(c.index) && (c = register(c))
+    c = @set c.associations = push(c.associations, o)
+    update(c)
+end
+function popFromAssociations(c::edm4eic!Truthiness)
+    iszero(c.index) && (c = register(c))
+    c = @set c.associations = pop(c.associations)
+    update(c)
+end
+function pushToUnassociatedMCParticles(c::edm4eic!Truthiness, o::edm4hep!MCParticle)
+    iszero(c.index) && (c = register(c))
+    c = @set c.unassociatedMCParticles = push(c.unassociatedMCParticles, o)
+    update(c)
+end
+function popFromUnassociatedMCParticles(c::edm4eic!Truthiness)
+    iszero(c.index) && (c = register(c))
+    c = @set c.unassociatedMCParticles = pop(c.unassociatedMCParticles)
+    update(c)
+end
+function pushToUnassociatedRecoParticles(c::edm4eic!Truthiness, o::edm4eic!ReconstructedParticle)
+    iszero(c.index) && (c = register(c))
+    c = @set c.unassociatedRecoParticles = push(c.unassociatedRecoParticles, o)
+    update(c)
+end
+function popFromUnassociatedRecoParticles(c::edm4eic!Truthiness)
+    iszero(c.index) && (c = register(c))
+    c = @set c.unassociatedRecoParticles = pop(c.unassociatedRecoParticles)
+    update(c)
+end
+function setAssociationContributions(o::edm4eic!Truthiness, v::AbstractVector{edm4eic!TruthinessContribution})
+    iszero(o.index) && (o = register(o))
+    o = @set o.associationContributions = v
+    update(o)
 end
 """
 Kinematic variables for DIS events
@@ -2219,7 +2447,7 @@ const Vertex = edm4eic!Vertex
 const Tensor = edm4eic!Tensor
 const TrackParameters = edm4eic!TrackParameters
 const HadronicFinalState = edm4eic!HadronicFinalState
-const RawHGCROCHit = edm4eic!RawHGCROCHit
+const TrackProtoClusterMatch = edm4eic!TrackProtoClusterMatch
 const MCRecoVertexParticleAssociation = edm4eic!MCRecoVertexParticleAssociation
 const TrackClusterMatch = edm4eic!TrackClusterMatch
 const SimTrackerHit = edm4hep!SimTrackerHit
@@ -2227,9 +2455,11 @@ const TrackSeed = edm4eic!TrackSeed
 const Track = edm4eic!Track
 const RawTrackerHit = edm4eic!RawTrackerHit
 const TrackerHitPlane = edm4hep!TrackerHitPlane
+const Jet = edm4eic!Jet
 const TrackSegment = edm4eic!TrackSegment
 const TrackerHit = edm4eic!TrackerHit
 const ParticleID = edm4hep!ParticleID
+const IrtParticle = edm4eic!IrtParticle
 const SimPulse = edm4eic!SimPulse
 const ReconstructedParticle = edm4eic!ReconstructedParticle
 const ProtoCluster = edm4eic!ProtoCluster
@@ -2241,6 +2471,8 @@ const MCRecoTrackerHitAssociation = edm4eic!MCRecoTrackerHitAssociation
 const RawTimeSeries = edm4hep!RawTimeSeries
 const Trajectory = edm4eic!Trajectory
 const MCParticle = edm4hep!MCParticle
+const IrtRadiatorInfo = edm4eic!IrtRadiatorInfo
+const RawCALOROCHit = edm4eic!RawCALOROCHit
 const MCRecoClusterParticleAssociation = edm4eic!MCRecoClusterParticleAssociation
 const CaloHitContribution = edm4hep!CaloHitContribution
 const MCRecoTrackParticleAssociation = edm4eic!MCRecoTrackParticleAssociation
@@ -2249,6 +2481,7 @@ const Cluster = edm4eic!Cluster
 const PMTHit = edm4eic!PMTHit
 const RecDqdx = edm4hep!RecDqdx
 const RingImage = edm4eic!RingImage
+const Truthiness = edm4eic!Truthiness
 const MCRecoParticleAssociation = edm4eic!MCRecoParticleAssociation
 const CherenkovParticleID = edm4eic!CherenkovParticleID
 const EventHeader = edm4hep!EventHeader
@@ -2259,4 +2492,4 @@ const RawCalorimeterHit = edm4hep!RawCalorimeterHit
 
 
 #---Exports
-export setNElectrons, setWeights, pushToClusters, popFromClusters, pushToHits, popFromHits, setShapeParameters, setSubdetectorEnergies, pushToParents, popFromParents, pushToDaughters, popFromDaughters, pushToSignalVertexParticles, popFromSignalVertexParticles, setCrossSections, setCrossSectionErrors, setAdcCounts, setAmplitude, pushToContributions, popFromContributions, pushToTrackerHits, popFromTrackerHits, pushToTracks, popFromTracks, setSubdetectorHitNumbers, setSubdetectorHoleNumbers, setTrackStates, pushToParticles, popFromParticles, setParameters, pushToParticleIDs, popFromParticleIDs, setHitContributions, pushToCalorimeterHits, popFromCalorimeterHits, pushToPulses, popFromPulses, setSamples, pushToTrackParameters, popFromTrackParameters, pushToMeasurements_deprecated, popFromMeasurements_deprecated, pushToOutliers_deprecated, popFromOutliers_deprecated, setMeasurementChi2, setOutlierChi2, pushToMeasurements, popFromMeasurements, setPoints, pushToRawHitAssociations, popFromRawHitAssociations, setHypotheses, setThetaPhiPhotons, setShape, setFloatData, setInt64Data, pushToAssociatedParticles, popFromAssociatedParticles, pushToHadrons, popFromHadrons, InclusiveKinematics, Vertex, Tensor, TrackParameters, HadronicFinalState, RawHGCROCHit, MCRecoVertexParticleAssociation, TrackClusterMatch, SimTrackerHit, TrackSeed, Track, RawTrackerHit, TrackerHitPlane, TrackSegment, TrackerHit, ParticleID, SimPulse, ReconstructedParticle, ProtoCluster, SimCalorimeterHit, Measurement2D, MCRecoCalorimeterHitAssociation, TimeSeries, MCRecoTrackerHitAssociation, RawTimeSeries, Trajectory, MCParticle, MCRecoClusterParticleAssociation, CaloHitContribution, MCRecoTrackParticleAssociation, CalorimeterHit, Cluster, PMTHit, RecDqdx, RingImage, MCRecoParticleAssociation, CherenkovParticleID, EventHeader, GeneratorEventParameters, TrackerHit3D, SenseWireHit, RawCalorimeterHit
+export setNElectrons, setWeights, pushToClusters, popFromClusters, pushToHits, popFromHits, setShapeParameters, setSubdetectorEnergies, setASamples, setBSamples, pushToParents, popFromParents, pushToDaughters, popFromDaughters, pushToSignalVertexParticles, popFromSignalVertexParticles, setCrossSections, setCrossSectionErrors, setAdcCounts, setAmplitude, pushToContributions, popFromContributions, pushToTrackerHits, popFromTrackerHits, pushToTracks, popFromTracks, setSubdetectorHitNumbers, setSubdetectorHoleNumbers, setTrackStates, pushToParticles, popFromParticles, setParameters, pushToParticleIDs, popFromParticleIDs, setHitContributions, pushToCalorimeterHits, popFromCalorimeterHits, pushToPulses, popFromPulses, pushToTrackParameters, popFromTrackParameters, pushToMeasurements_deprecated, popFromMeasurements_deprecated, pushToOutliers_deprecated, popFromOutliers_deprecated, setMeasurementChi2, setOutlierChi2, pushToMeasurements, popFromMeasurements, setPoints, pushToRawHitAssociations, popFromRawHitAssociations, setHypotheses, setThetaPhiPhotons, pushToRadiators, popFromRadiators, setShape, setFloatData, setInt64Data, pushToAssociatedParticles, popFromAssociatedParticles, pushToHadrons, popFromHadrons, pushToConstituents, popFromConstituents, pushToAssociations, popFromAssociations, pushToUnassociatedMCParticles, popFromUnassociatedMCParticles, pushToUnassociatedRecoParticles, popFromUnassociatedRecoParticles, setAssociationContributions, InclusiveKinematics, Vertex, Tensor, TrackParameters, HadronicFinalState, TrackProtoClusterMatch, MCRecoVertexParticleAssociation, TrackClusterMatch, SimTrackerHit, TrackSeed, Track, RawTrackerHit, TrackerHitPlane, Jet, TrackSegment, TrackerHit, ParticleID, IrtParticle, SimPulse, ReconstructedParticle, ProtoCluster, SimCalorimeterHit, Measurement2D, MCRecoCalorimeterHitAssociation, TimeSeries, MCRecoTrackerHitAssociation, RawTimeSeries, Trajectory, MCParticle, IrtRadiatorInfo, RawCALOROCHit, MCRecoClusterParticleAssociation, CaloHitContribution, MCRecoTrackParticleAssociation, CalorimeterHit, Cluster, PMTHit, RecDqdx, RingImage, Truthiness, MCRecoParticleAssociation, CherenkovParticleID, EventHeader, GeneratorEventParameters, TrackerHit3D, SenseWireHit, RawCalorimeterHit

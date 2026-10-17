@@ -6,6 +6,7 @@ Tracker hit interface class
 - `type::Int32`:  type of the raw data hit
 - `quality::Int32`:  quality bit flag of the hit
 - `time::Float32`:  time of the hit
+- `timeError::Float32`:  error measured on time
 - `eDep::Float32`:  energy deposited on the hit
 - `eDepError::Float32`:  error measured on eDep
 - `position::edm4hep!Vector3d`:  hit position as recorded by the sensor. The exact interpretation will depend on the currently held type of the interface

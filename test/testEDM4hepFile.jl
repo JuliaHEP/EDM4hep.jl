@@ -179,6 +179,7 @@ reset!(c::Counter) = c.count = 41
             @test h.eDepError == ++(count)
             @test th3d[1].position == Vector3d(++(count), ++(count), ++(count))
             @test h.covMatrix == cov3f
+            @test h.timeError == ++(count)
         end
        
         #---TrackerHitPlaneCollection----------------------------------------------------------------
@@ -197,6 +198,7 @@ reset!(c::Counter) = c.count = 41
             @test h.dv == ++(count)
             @test thp[1].position == Vector3d(++(count), ++(count), ++(count))
             @test h.covMatrix == cov3f
+            @test h.timeError == ++(count)
         end
 
         #---RawTimeSeriesCollection-----------------------------------------------------------------
@@ -235,6 +237,29 @@ reset!(c::Counter) = c.count = 41
             @test t.trackerHits[1] == th3d[1]
             @test t.tracks[1] == tc[1]
         end
+
+        ##--SenseWireHitCollection------------------------------------------------------------------
+        swh = RootIO.get(reader, evt, "SenseWireHitCollection")
+        reset!(count)
+        for h in swh
+            @test h.cellID == ++(count)
+            @test h.type == ++(count)
+            @test h.quality == ++(count)
+            @test h.time == ++(count)
+            @test h.eDep == ++(count)
+            @test h.eDepError == ++(count)
+            @test h.wireStereoAngle == ++(count)
+            @test h.wireAzimuthalAngle == ++(count)
+            @test h.position.x == ++(count)
+            @test h.position.y == ++(count)
+            @test h.position.z == ++(count)
+            @test h.positionAlongWireError == ++(count)
+            @test h.distanceToWire == ++(count)
+            @test h.distanceToWireError == ++(count)
+            @test h.nElectrons == [++(count) for i in 1:vectorsize]
+            @test h.timeError == ++(count)
+        end
+
 
         #---VertexCollection------------------------------------------------------------------------
         vc = RootIO.get(reader, evt, "VertexCollection")
