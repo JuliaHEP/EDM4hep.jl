@@ -15,6 +15,7 @@
   - emd4hep.yaml version v01.02
   - edm4eic.yaml version v8.10.0
 
+
 ## 1.0.0
 - New EDM4hep schema version 1 not backward compatible
   - Relation between `ReconstructedParticle` to ``ParticleID` inverted
